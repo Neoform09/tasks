@@ -213,6 +213,10 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .pcard { background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
 .phead { display: flex; align-items: center; gap: 10px; }
 .phead h2 { margin: 0; font-size: calc(17px * var(--fs)); flex: 1; }
+.pbarTop { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.btn.icon { padding-left: 10px; padding-right: 10px; }
+.chk { display: flex; align-items: center; gap: 8px; font-size: calc(14px * var(--fs)); }
+.chk input { width: calc(18px * var(--fs)); height: calc(18px * var(--fs)); }
 .pbar { height: 6px; background: var(--line); border-radius: 99px; margin: 12px 0 6px; overflow: hidden; }
 .pbar span { display: block; height: 100%; background: var(--proj); border-radius: 99px; }
 .pmeta { font-size: calc(12px * var(--fs)); color: var(--muted); margin-bottom: 12px; }
@@ -490,6 +494,28 @@ window.AppSync = (function () {
   </form>
 </dialog>
 
+<dialog id="pdlg">
+  <form class="dlg" method="dialog" id="pform">
+    <h2 id="pdlgTitle">Project</h2>
+    <label class="field"><span>Name</span><input id="pName" required placeholder="e.g. Murgle - Fence"></label>
+    <label class="field"><span>Description</span><input id="pDesc" placeholder="optional"></label>
+    <div class="row2">
+      <label class="field"><span>Type</span>
+        <select id="pKind"><option value="project">Project</option><option value="area">Ongoing area</option><option value="archived">Archived (hidden)</option></select>
+      </label>
+      <label class="field"><span>Start</span><input type="date" id="pStart"></label>
+      <label class="field"><span>Deadline</span><input type="date" id="pDeadline"></label>
+    </div>
+    <label class="chk" id="pDelTasksWrap"><input type="checkbox" id="pDelTasks"> <span id="pDelTasksTxt">Also delete its tasks</span></label>
+    <div class="actions">
+      <button type="button" class="btn danger" id="pDelBtn">Delete project</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn" id="pCancelBtn">Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
 <script>
 /* ============================================================
    YOUR CATEGORIES — edit freely (key, description, color).
@@ -648,7 +674,7 @@ let lastSync = 0, syncErr = '', syncing = false, syncAgain = false, syncTimer = 
 
 const persist = () => { try { localStorage.setItem(SKEY, JSON.stringify(ST)); } catch (e) {} };
 const syncPass = () => { try { return JSON.parse(localStorage.getItem('appsync-pass')) || ''; } catch (e) { return ''; } };
-const dlgOpen = () => document.getElementById('dlg').open;
+const dlgOpen = () => document.getElementById('dlg').open || document.getElementById('pdlg').open;
 
 function applyAll() {
   doc = parseDoc(ST.text.TASKS || '# Tasks');
@@ -1003,8 +1029,9 @@ function daysLeftTxt(s) {
 
 function renderProjects() {
   const list = projects().filter(p => !filters.size || [...filters].every(f => !f.startsWith('P:')) || filters.has('P:' + p));
-  if (!list.length) return `<div class="empty">No projects yet. Open a task and fill in <b>Project</b>, or add <code>[[Project name]]</code> to a task in TASKS.md.</div>`;
-  return `<div class="projects">${list.map(p => {
+  const top = `<div class="pbarTop"><button class="btn primary" data-newproj>+ New project</button></div>`;
+  if (!list.length) return top + `<div class="empty">No projects yet. Tap <b>+ New project</b>, or open a task and fill in <b>Project</b>.</div>`;
+  return top + `<div class="projects">${list.map(p => {
     const all = allTasks().filter(x => x.t.proj === p);
     const shown = all.filter(x => passesFilter(x.t) || [...filters].every(f => f.startsWith('P:')));
     const open = shown.filter(x => !x.t.done), done = shown.filter(x => x.t.done);
@@ -1014,7 +1041,7 @@ function renderProjects() {
     const over = m.deadline && m.deadline < todayYmd() && nDone < all.length;
     const due = m.deadline ? ` · <span class="${over ? 'bad' : ''}">📅 ${esc(shortDate(m.deadline))} · ${daysLeftTxt(m.deadline)}</span>` : m.kind === 'area' ? ' · ongoing area' : '';
     return `<section class="pcard">
-      <div class="phead"><h2>${esc(p)}</h2><button class="btn" data-addproj="${esc(p)}">+ Add task</button></div>
+      <div class="phead"><h2>${esc(p)}</h2><button class="btn" data-addproj="${esc(p)}">+ Add task</button><button class="btn icon" data-editproj="${esc(p)}" title="Edit or delete project">✎</button></div>
       ${m.desc ? `<div class="ctx" style="margin-top:4px">${esc(m.desc)}</div>` : ''}
       <div class="pbar"><span style="width:${pct}%"></span></div>
       <div class="pmeta">${nDone} of ${all.length} done · ${pct}%${left ? ' · ' + durNice(left) + ' left' : ''}${due}</div>
@@ -1171,6 +1198,9 @@ mainEl.addEventListener('click', e => {
   if (w) { weekOffset = w.dataset.week === '0' ? 0 : weekOffset + Number(w.dataset.week); render(); return; }
   const ap = e.target.closest('[data-addproj]');
   if (ap) { presetProj = ap.dataset.addproj; openEditor(null); return; }
+  if (e.target.closest('[data-newproj]')) { openProjEditor(null); return; }
+  const ep = e.target.closest('[data-editproj]');
+  if (ep) { openProjEditor(ep.dataset.editproj); return; }
   const gb = e.target.closest('[data-goal]');
   if (gb) { toggleGoal(Number(gb.dataset.goal)); return; }
   const gt = e.target.closest('[data-goto]');
@@ -1289,6 +1319,83 @@ $('form').addEventListener('submit', e => {
   }
   dlg.close(); save();
 });
+
+/* ---------- add / edit / delete projects (stored in PROJECTS.md) ---------- */
+let editingProj = null;
+const KIND_HEAD = { project: 'Projects', area: 'Areas', archived: 'Archive' };
+const projLineRe = n => new RegExp('^\\s*-\\s+\\*\\*' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\*\\*');
+function projLine(p) {
+  let l = `- **${p.name}**`;
+  if (p.desc) l += ' — ' + p.desc;
+  if (p.start) l += ' ▶️ ' + fileDate(p.start);
+  if (p.deadline) l += ' 📅 ' + fileDate(p.deadline);
+  return l;
+}
+function kindOfHead(h) { return /area/i.test(h) ? 'area' : /archiv|done/i.test(h) ? 'archived' : 'project'; }
+// returns PROJECTS.md text with the old project's line removed and (optionally) a new line added in the right section
+function editProjectsText(oldName, p) {
+  let lines = norm(ST.text.PROJECTS || '# Projects\n').split('\n');
+  if (oldName) lines = lines.filter(l => !projLineRe(oldName).test(l));
+  if (!p) return lines.join('\n');
+  let h = lines.findIndex(l => /^##\s/.test(l) && kindOfHead(l.replace(/^##\s+/, '')) === p.kind);
+  if (h < 0) {
+    while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+    lines.push('', '## ' + KIND_HEAD[p.kind]); h = lines.length - 1;
+  }
+  let at = h + 1;
+  while (at < lines.length && !/^##\s/.test(lines[at])) at++;
+  while (at > h + 1 && !lines[at - 1].trim()) at--;
+  lines.splice(at, 0, projLine(p));
+  return lines.join('\n') + (lines[lines.length - 1] === '' ? '' : '\n');
+}
+function openProjEditor(name) {
+  editingProj = name;
+  const m = (name && projMeta(name)) || { name: name || '', kind: 'project', desc: '', start: null, deadline: null };
+  const n = name ? allTasks().filter(x => x.t.proj === name).length : 0;
+  $('pdlgTitle').textContent = name ? 'Edit project' : 'New project';
+  $('pName').value = m.name; $('pDesc').value = m.desc || ''; $('pKind').value = m.kind;
+  $('pStart').value = m.start || ''; $('pDeadline').value = m.deadline || '';
+  $('pDelBtn').style.display = name ? '' : 'none';
+  $('pDelTasks').checked = false;
+  $('pDelTasksWrap').style.display = name && n ? '' : 'none';
+  $('pDelTasksTxt').textContent = `When deleting, also delete its ${n} task${n === 1 ? '' : 's'} (otherwise they stay, without a project)`;
+  $('pdlg').showModal(); $('pName').focus();
+}
+$('pCancelBtn').onclick = () => $('pdlg').close();
+$('pdlg').addEventListener('close', () => render());
+$('pform').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('pName').value.trim().replace(/\*\*|\[\[|\]\]/g, ''); if (!name) return;
+  if (name !== editingProj && projects().includes(name)) { toast('A project with that name already exists'); return; }
+  const p = { name, desc: $('pDesc').value.trim(), kind: $('pKind').value, start: $('pStart').value || null, deadline: $('pDeadline').value || null };
+  let tasksChanged = false;
+  if (editingProj && editingProj !== name) allTasks().forEach(({ t }) => { if (t.proj === editingProj) { t.proj = name; t.raw = null; tasksChanged = true; } });
+  ST.text.PROJECTS = editProjectsText(editingProj, p);
+  if (tasksChanged) ST.text.TASKS = serialize();
+  $('pdlg').close();
+  setText('PROJECTS', ST.text.PROJECTS);
+  toast(editingProj ? 'Project saved' : 'Project added');
+});
+$('pDelBtn').onclick = () => {
+  const b = $('pDelBtn');
+  if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Click again to delete'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Delete project'; }, 3000); return; }
+  delete b.dataset.armed; b.textContent = 'Delete project';
+  const name = editingProj, alsoTasks = $('pDelTasks').checked;
+  let changed = false;
+  for (const s of doc.sections) {
+    for (let i = s.items.length - 1; i >= 0; i--) {
+      const t = s.items[i]; if (t.rawLine !== undefined || t.proj !== name) continue;
+      if (alsoTasks) s.items.splice(i, 1); else { t.proj = ''; t.raw = null; }
+      changed = true;
+    }
+  }
+  if (changed) ST.text.TASKS = serialize();
+  ST.text.PROJECTS = editProjectsText(name, null);
+  filters.delete('P:' + name);
+  $('pdlg').close();
+  setText('PROJECTS', ST.text.PROJECTS);
+  toast('Project deleted');
+};
 
 (async function init() {
   try { const v = localStorage.getItem('igor-view'); if (['today', 'board', 'week', 'projects', 'gantt', 'goals'].includes(v)) view = v; } catch (e) {}
