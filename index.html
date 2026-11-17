@@ -453,6 +453,14 @@ body.dragging-tasks .ptag[data-tagdrop] { box-shadow: inset 0 0 0 1px color-mix(
 #selbar .fchip.on { background: var(--c); color: #fff; border-color: var(--c); }
 #selbar .fchip .n { opacity: .7; margin-left: 4px; }
 body:has(#selbar.show) main { padding-bottom: 40vh; }
+
+/* projects: show / hide tasks */
+.pbarTop { display: flex; gap: 8px; flex-wrap: wrap; }
+.phead h2[data-ptog] { cursor: pointer; user-select: none; }
+.phead h2[data-ptog]:hover { color: var(--accent); }
+.phead .pcar { display: inline-block; width: 1em; opacity: .6; }
+.phead .pcnt { font-size: .6em; font-weight: 600; color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; vertical-align: middle; }
+.pcard.closed .pmeta { margin-bottom: 0; }
 </style>
 </head>
 <body>
@@ -1331,12 +1339,16 @@ function renderTagSide(names, inNav) {
   </details>`;
 }
 
+/* which projects show their tasks (saved per device) */
+const projOpenSet = new Set((() => { try { return JSON.parse(localStorage.getItem('igor-projopen')) || []; } catch (e) { return []; } })());
+const saveProjOpen = () => { try { localStorage.setItem('igor-projopen', JSON.stringify([...projOpenSet])); } catch (e) {} };
 function renderProjects() {
   const names = projects();
   const list = names.filter(p => !filters.size || [...filters].every(f => !f.startsWith('P:')) || filters.has('P:' + p))
     .filter(p => !projTag || (projTag === '__none' ? !projTags(p).length
       : tagMatch(projTags(p), projTag) || allTasks().some(x => x.t.proj === p && tagMatch(x.t.tags, projTag))));
-  const top = `<div class="pbarTop"><button class="btn primary" data-newproj>+ New project</button></div>`;
+  const anyOpen = names.some(p => projOpenSet.has(p));
+  const top = `<div class="pbarTop"><button class="btn primary" data-newproj>+ New project</button><button class="btn" data-pall="${anyOpen ? 'hide' : 'show'}">${anyOpen ? '▴ Hide all tasks' : '▾ Show all tasks'}</button></div>`;
   if (!list.length) return `${top}<div class="empty">${names.length ? 'No projects with this tag.' : 'No projects yet. Tap <b>+ New project</b>, or open a task and fill in <b>Project</b>.'}</div>`;
   return `${top}<div class="projects">${list.map(p => {
     const all = allTasks().filter(x => x.t.proj === p);
@@ -1347,14 +1359,15 @@ function renderProjects() {
     const m = projMeta(p) || {};
     const over = m.deadline && m.deadline < todayYmd() && nDone < all.length;
     const due = m.deadline ? ` · <span class="${over ? 'bad' : ''}">📅 ${esc(shortDate(m.deadline))} · ${daysLeftTxt(m.deadline)}</span>` : m.kind === 'area' ? ' · ongoing area' : '';
-    return `<section class="pcard">
-      <div class="phead"><h2>${esc(p)}</h2><button class="btn" data-addproj="${esc(p)}">+ Add task</button><button class="btn icon" data-editproj="${esc(p)}" title="Edit or delete project">✎</button></div>
+    const isOpen = projOpenSet.has(p);
+    return `<section class="pcard ${isOpen ? '' : 'closed'}">
+      <div class="phead"><h2 data-ptog="${esc(p)}" title="${isOpen ? 'Hide' : 'Show'} tasks"><span class="pcar">${isOpen ? '▾' : '▸'}</span> ${esc(p)} <span class="pcnt">${open.length}</span></h2><button class="btn" data-addproj="${esc(p)}">+ Add task</button><button class="btn icon" data-editproj="${esc(p)}" title="Edit or delete project">✎</button></div>
       ${(m.tags || []).length ? `<div class="ptchips">${m.tags.map(t => { const i = t.lastIndexOf('/'); return `<span class="ptchip ${projTag === t ? 'on' : ''}" data-ptag="${esc(t)}" title="Show projects tagged ${esc(t)}">${i > 0 ? `<span class="par">${esc(t.slice(0, i).split('/').join(' › '))} › </span>` : ''}${esc(t.slice(i + 1))}</span>`; }).join('')}</div>` : ''}
       ${m.desc ? `<div class="ctx" style="margin-top:4px">${esc(m.desc)}</div>` : ''}
       <div class="pbar"><span style="width:${pct}%"></span></div>
       <div class="pmeta">${nDone} of ${all.length} done · ${pct}%${left ? ' · ' + durNice(left) + ' left' : ''}${due}</div>
-      ${open.map(x => taskHTML(x.t, { hideProject: true })).join('') || `<div class="empty">${all.length ? 'All done 🎉' : 'No tasks yet.'}</div>`}
-      ${done.length ? `<details class="pdone"><summary>${done.length} done</summary>${done.map(x => taskHTML(x.t, { hideProject: true, compact: true })).join('')}</details>` : ''}
+      ${!isOpen ? '' : (open.map(x => taskHTML(x.t, { hideProject: true })).join('') || `<div class="empty">${all.length ? 'All done 🎉' : 'No tasks yet.'}</div>`)}
+      ${isOpen && done.length ? `<details class="pdone"><summary>${done.length} done</summary>${done.map(x => taskHTML(x.t, { hideProject: true, compact: true })).join('')}</details>` : ''}
     </section>`;
   }).join('')}</div>`;
 }
@@ -1517,6 +1530,10 @@ mainEl.addEventListener('click', e => {
   if (gv) { view = gv.dataset.goview; try { localStorage.setItem('igor-view', view); } catch (er) {} document.body.classList.remove('navopen'); render(); window.scrollTo(0, 0); return; }
   const gp = e.target.closest('[data-goproj]');
   if (gp) { view = 'proj'; curProj = gp.dataset.goproj; try { localStorage.setItem('igor-view', view); localStorage.setItem('igor-proj', curProj); } catch (er) {} document.body.classList.remove('navopen'); render(); window.scrollTo(0, 0); return; }
+  const pa = e.target.closest('[data-pall]');
+  if (pa) { if (pa.dataset.pall === 'show') projects().forEach(p => projOpenSet.add(p)); else projOpenSet.clear(); saveProjOpen(); render(); return; }
+  const ptg = e.target.closest('[data-ptog]');
+  if (ptg) { const p = ptg.dataset.ptog; projOpenSet.has(p) ? projOpenSet.delete(p) : projOpenSet.add(p); saveProjOpen(); render(); return; }
   const ap = e.target.closest('[data-addproj]');
   if (ap) { presetProj = ap.dataset.addproj; openEditor(null); return; }
   if (e.target.closest('[data-newproj]')) { openProjEditor(null); return; }
