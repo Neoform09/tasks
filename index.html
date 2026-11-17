@@ -176,6 +176,16 @@ header { padding-bottom: 12px; }
 .body { min-width: 0; cursor: pointer; }
 .title { font-weight: 600; overflow-wrap: anywhere; }
 .ctx { color: var(--muted); font-size: calc(13px * var(--fs)); }
+.subs { flex-basis: 100%; margin: 6px 0 2px; display: flex; flex-direction: column; gap: 2px; }
+.sub { display: flex; align-items: flex-start; gap: 8px; padding: 3px 4px; border-radius: 6px; cursor: pointer; font-size: calc(13.5px * var(--fs)); line-height: 1.35; }
+.sub:hover { background: var(--hover); }
+.sub .sbox { flex: none; width: calc(15px * var(--fs)); height: calc(15px * var(--fs)); margin-top: 1px; border: 2px solid var(--faint); border-radius: 4px; display: grid; place-items: center; }
+.sub.done .sbox { background: var(--accent); border-color: var(--accent); }
+.sub.done .sbox::after { content: "✓"; color: var(--accent-text); font-size: calc(10px * var(--fs)); font-weight: 700; }
+.sub.done .stxt { text-decoration: line-through; color: var(--muted); }
+.stxt { overflow-wrap: anywhere; }
+.scount { font-size: calc(11.5px * var(--fs)); font-weight: 600; color: var(--muted); white-space: nowrap; }
+.scount.all { color: var(--accent); }
 .notes { margin: 4px 0 0; padding-left: 16px; color: var(--muted); font-size: calc(12.5px * var(--fs)); }
 .meta { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
 .chip {
@@ -624,6 +634,7 @@ window.AppSync = (function () {
       <label class="field"><span>Date</span><input type="date" id="fDate"></label>
       <label class="field"><span>Section</span><select id="fSec"></select></label>
     </div>
+    <label class="field"><span>Subtasks (one per line · start a line with [x] to mark it done)</span><textarea id="fSubs" rows="4" placeholder="Buy paint&#10;Sand the boards&#10;Paint"></textarea></label>
     <label class="field"><span>Notes (one per line)</span><textarea id="fNotes" rows="3"></textarea></label>
     <div class="actions">
       <button type="button" class="btn danger" id="delBtn">Delete</button>
@@ -728,7 +739,7 @@ function parseTaskLine(line) {
   const m = line.match(/^\s*- \[( |x|X)\]\s*(.*)$/);
   if (!m) return null;
   let rest = m[2];
-  const t = { id: idSeq++, done: m[1] !== ' ', title: '', ctx: '', tags: [], proj: '', dur: 0, date: null, doneDate: null, notes: [], raw: null };
+  const t = { id: idSeq++, done: m[1] !== ' ', title: '', ctx: '', tags: [], proj: '', dur: 0, date: null, doneDate: null, notes: [], subs: [], raw: null };
   rest = rest.replace(/\(done\s+(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})\)/i, (_, d, mo, y) => { t.doneDate = ymd(y, mo, d); return ''; });
   rest = rest.replace(/📅\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})?/u, (_, d, mo, y) => { t.date = ymd(y || new Date().getFullYear(), mo, d); return ''; });
   rest = rest.replace(/(^|\s)~(?:(\d+)h)?(?:(\d+)m(?:in)?)?(?=\s|$)/, (all, sp, h, mi) => {
@@ -757,7 +768,7 @@ function parseDoc(text) {
       const t = parseTaskLine(line); t.raw = [line]; sec.items.push(t); last = t; continue;
     }
     const nm = line.match(/^\s{2,}[-*]\s+(.*)$/);
-    if (nm && last) { last.notes.push(nm[1].replace(/^\[( |x)\]\s*/, '')); last.raw.push(line); continue; }
+    if (nm && last) { const sm = nm[1].match(/^\[( |x|X)\]\s*(.*)$/); if (sm) last.subs.push({ text: sm[2], done: sm[1] !== ' ' }); else last.notes.push(nm[1]); last.raw.push(line); continue; }
     sec.items.push({ rawLine: line }); last = null;
   }
   if (!out.preamble.length) out.preamble = ['# Tasks'];
@@ -777,7 +788,7 @@ function taskToLines(t) {
   if (t.dur) parts.push('~' + durFile(t.dur));
   if (t.date) parts.push('📅 ' + fileDate(t.date));
   if (t.done && t.doneDate) parts.push(`(done ${fileDate(t.doneDate)})`);
-  return [parts.join(' '), ...t.notes.map(n => '  - ' + n)];
+  return [parts.join(' '), ...(t.subs || []).map(x => `  - [${x.done ? 'x' : ' '}] ${x.text}`), ...t.notes.map(n => '  - ' + n)];
 }
 
 function serialize() {
@@ -818,6 +829,10 @@ function moveTask(id, secName) {
   else { if (t.done) { t.done = false; t.doneDate = null; } target.items.push(t); }
 }
 
+function toggleSub(id, i) {
+  const hit = findTask(id); if (!hit || !hit.t.subs || !hit.t.subs[i]) return;
+  hit.t.subs[i].done = !hit.t.subs[i].done; hit.t.raw = null; save();
+}
 function toggleDone(id) {
   const hit = findTask(id); if (!hit) return;
   moveTask(id, hit.t.done ? activeSection().name : 'Done');
@@ -1087,6 +1102,14 @@ function setStatus(kind, txt) {
 /* ---------- rendering ---------- */
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+function subsHTML(t, opts = {}) {
+  const ss = t.subs || []; if (!ss.length) return '';
+  const d = ss.filter(x => x.done).length;
+  const count = `<span class="scount ${d === ss.length ? 'all' : ''}" title="Subtasks done">☑ ${d}/${ss.length}</span>`;
+  if (opts.compact) return count;
+  return `<div class="subs">${ss.map((x, i) => `<div class="sub ${x.done ? 'done' : ''}" data-act="sub" data-i="${i}" title="${x.done ? 'Mark not done' : 'Mark done'}"><span class="sbox"></span><span class="stxt">${esc(x.text)}</span></div>`).join('')}</div>`;
+}
+function subCount(t) { const ss = t.subs || []; if (!ss.length) return ''; const d = ss.filter(x => x.done).length; return `<span class="scount ${d === ss.length ? 'all' : ''}">☑ ${d}/${ss.length}</span>`; }
 function taskHTML(t, opts = {}) {
   const chips = t.tags.map(c => `<span class="chip ${projTag === c ? 'on' : ''}" style="--c:${tagColor(c)}" data-ptag="${esc(c)}" title="Show everything tagged ${esc(tagLabel(c))}">${esc(tagLabel(c))}</span>`).join('');
   const over = t.date && !t.done && t.date < todayYmd();
@@ -1098,6 +1121,7 @@ function taskHTML(t, opts = {}) {
     <div class="body" data-act="edit">
       <div class="title">${esc(t.title)}</div>
       ${t.ctx ? `<div class="ctx">${esc(t.ctx)}</div>` : ''}
+      ${subsHTML(t, opts)}
       ${t.notes.length && !opts.compact ? `<ul class="notes">${t.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
       ${chips || projB ? `<div class="meta">${projB}${chips}</div>` : ''}
     </div>
@@ -1167,7 +1191,7 @@ function rowHTML(t, s, opts = {}) {
   const dt = t.date && !opts.hideDate ? `<span class="dt ${over ? 'over' : ''}">${esc(niceDate(t.date))}</span>` : '';
   return `<div class="task trow ${t.done ? 'done' : ''} ${sel.has(t.id) ? 'sel' : ''}" draggable="true" data-id="${t.id}">
     <button class="check" data-act="toggle" title="${t.done ? 'Mark not done' : 'Mark done'}"></button>
-    <div class="body" data-act="edit"><span class="title">${esc(t.title)}</span>${t.ctx && !opts.compact ? `<span class="ctx">${esc(t.ctx)}</span>` : ''}</div>
+    <div class="body" data-act="edit"><span class="title">${esc(t.title)}</span>${t.ctx && !opts.compact ? `<span class="ctx">${esc(t.ctx)}</span>` : ''}${(t.subs || []).length ? (opts.compact ? subCount(t) : subCount(t) + subsHTML(t)) : ''}</div>
     <div class="rmeta">${t.dur ? `<span class="dur">${durNice(t.dur)}</span>` : ''}${tags}${proj}${wait}${dt}<button class="del" data-act="del" title="Delete task">🗑</button></div>
   </div>`;
 }
@@ -1584,6 +1608,7 @@ mainEl.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el) return;
   const id = Number(el.closest('.task').dataset.id);
   if (el.dataset.act === 'toggle') toggleDone(id);
+  else if (el.dataset.act === 'sub') toggleSub(id, Number(el.dataset.i));
   else if (el.dataset.act === 'del') deleteTask(id, el);
   else openEditor(id);
 });
@@ -1744,7 +1769,7 @@ function openEditor(id) {
   const hit = id ? findTask(id) : null;
   editing = hit ? hit.t.id : null;
   if (!id && !presetProj && view === 'proj') presetProj = curProj;
-  const t = hit ? hit.t : { title: '', ctx: '', tags: [], proj: presetProj || '', dur: 0, date: presetProj ? null : (view === 'today' || view === 'next7') ? todayYmd() : view === 'tomorrow' ? addDays(todayYmd(), 1) : null, notes: [] };
+  const t = hit ? hit.t : { title: '', ctx: '', tags: [], proj: presetProj || '', dur: 0, date: presetProj ? null : (view === 'today' || view === 'next7') ? todayYmd() : view === 'tomorrow' ? addDays(todayYmd(), 1) : null, notes: [], subs: [] };
   presetProj = null;
   $('fProj').value = t.proj || '';
   $('projList').innerHTML = projects().map(p => `<option value="${esc(p)}">`).join('');
@@ -1758,6 +1783,7 @@ function openEditor(id) {
   $('fDate').value = t.date || '';
   $('fSec').innerHTML = doc.sections.map(s => `<option ${hit ? (hit.s === s ? 'selected' : '') : (s === activeSection() ? 'selected' : '')}>${esc(s.name)}</option>`).join('');
   $('fNotes').value = t.notes.join('\n');
+  $('fSubs').value = (t.subs || []).map(x => (x.done ? '[x] ' : '') + x.text).join('\n');
   $('delBtn').style.display = hit ? '' : 'none';
   dlg.showModal(); $('fTitle').focus();
 }
@@ -1794,7 +1820,8 @@ $('form').addEventListener('submit', e => {
     proj: $('fProj').value.trim(),
     title, ctx: $('fCtx').value.trim(), tags,
     dur: Number($('fDur').value) || 0, date: $('fDate').value || null,
-    notes: $('fNotes').value.split('\n').map(s => s.trim()).filter(Boolean), raw: null,
+    notes: $('fNotes').value.split('\n').map(s => s.trim()).filter(Boolean),
+    subs: $('fSubs').value.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^\[( |x|X)\]\s*(.*)$/); return m ? { text: m[2], done: m[1] !== ' ' } : { text: s, done: false }; }).filter(x => x.text), raw: null,
   };
   const secName = $('fSec').value;
   if (editing) {
