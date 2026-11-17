@@ -584,6 +584,13 @@ function tagColor(t) {
   return TAG_PALETTE[h % TAG_PALETTE.length];
 }
 const tagLabel = t => String(t).split('/').join(' › ');
+// "EMP" typed alone means "PRO/EMP" when that is the only tag called EMP
+function resolveTag(t) {
+  if (!t || t.includes('/')) return t;
+  const all = allTagPaths(); if (all.includes(t)) return t;
+  const hits = all.filter(p => p.split('/').pop().toLowerCase() === t.toLowerCase());
+  return hits.length === 1 ? hits[0] : t;
+}
 
 let doc = { preamble: ['# Tasks'], sections: [] };
 let view = 'today', weekOffset = 0, editing = null, presetProj = null;
@@ -1133,7 +1140,8 @@ function renderTagSide(names) {
     const kids = sortKids(node);
     const open = !tagClosed.has(node.path);
     const tw = kids.length ? `<span class="tw" data-ptoggle="${esc(node.path)}">${open ? '▾' : '▸'}</span>` : `<span class="tw"></span>`;
-    const cnt = pv && tagSort !== 'tasks' ? `<span class="n" title="projects">${node.projs.size}</span>` : `<span class="n" title="open tasks">${node.tasks}</span>`;
+    const np = node.projs.size;
+    const cnt = `<span class="n" title="${node.tasks} open task${node.tasks === 1 ? '' : 's'}${np ? ` · ${np} project${np === 1 ? '' : 's'}` : ''} (sub-tags included)">${node.tasks}${pv && np ? ` · ▣${np}` : ''}</span>`;
     const tip = node.path + (node.created ? ` · added ${node.created}` : '');
     return `<button class="ptag ${projTag === node.path && !tagEdit ? 'on' : ''}" data-row="${esc(node.path)}" data-depth="${depth}" ${tagEdit ? `data-tedit="${esc(node.path)}"` : `data-ptag="${esc(node.path)}"`} style="padding-left:${4 + depth * 16}px" title="${esc(tip)}"><span class="dh" data-drag="${esc(node.path)}" title="Drag: up/down to reorder, right/left to nest">⋮⋮</span>${tw}<span class="nm">${esc(node.name)}</span>${tagEdit ? '<span class="n">✎</span>' : cnt}</button>`
       + (open ? kids.map(k => row(k, depth + 1)).join('') : '');
@@ -1398,6 +1406,7 @@ document.getElementById('quick').addEventListener('keydown', e => {
   const t = parseTaskLine('- [ ] ' + txt.trim());
   if (!t || !t.title) return;
   if (date && !t.date) t.date = date;
+  t.tags = [...new Set(t.tags.map(resolveTag))];
   if (!t.date && view === 'today') t.date = todayYmd();
   activeSection().items.push(t);
   e.target.value = '';
@@ -1426,7 +1435,7 @@ function openEditor(id) {
   $('delBtn').style.display = hit ? '' : 'none';
   dlg.showModal(); $('fTitle').focus();
 }
-const taskTyped = () => [...new Set($('fTags').value.split(/[\s,]+/).map(cleanTag).filter(Boolean))];
+const taskTyped = () => [...new Set($('fTags').value.split(/[\s,]+/).map(cleanTag).filter(Boolean).map(resolveTag))];
 function renderTaskTagPick() {
   const cur = taskTyped();
   $('fTagPick').innerHTML = allTagPaths().map(t => `<button type="button" class="ptchip ${cur.includes(t) ? 'on' : ''}" data-pick="${esc(t)}" style="${cur.includes(t) ? '' : `border-color:${tagColor(t)}66`}">${esc(tagLabel(t))}</button>`).join('');
@@ -1585,7 +1594,7 @@ function openProjEditor(name) {
 }
 $('pCancelBtn').onclick = () => $('pdlg').close();
 const allProjTags = () => allTagPaths();
-const typedTags = () => [...new Set($('pTags').value.split(/[\s,]+/).map(cleanTag).filter(Boolean))];
+const typedTags = () => [...new Set($('pTags').value.split(/[\s,]+/).map(cleanTag).filter(Boolean).map(resolveTag))];
 function renderTagPick() {
   const cur = typedTags();
   $('pTagPick').innerHTML = allProjTags().map(t => `<button type="button" class="ptchip ${cur.includes(t) ? 'on' : ''}" data-pick="${esc(t)}">${esc(t)}</button>`).join('');
