@@ -108,6 +108,55 @@ header {
 
 main { padding: 16px 24px 48px; }
 
+/* TickTick-style shell: smart lists + tags on the left, one list on the right */
+.tabs, #filters, #quickWrap { display: none !important; }
+header { padding-bottom: 12px; }
+.navbtn { display: none; border: 0; background: none; font-size: calc(22px * var(--fs)); padding: 0 6px 0 0; color: var(--text); }
+.shell { display: grid; grid-template-columns: 300px minmax(0, 1fr); align-items: start; }
+.nav { position: sticky; top: var(--hdr, 70px); max-height: calc(100vh - var(--hdr, 70px)); overflow-y: auto; padding: 14px 10px 40px 16px; border-right: 1px solid var(--line); background: var(--panel-2); min-height: calc(100vh - var(--hdr, 70px)); }
+.nav h4 { margin: 14px 8px 6px; font-size: calc(12px * var(--fs)); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 650; }
+.nitem { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 9px; color: var(--text); }
+.nitem:hover { background: var(--hover); }
+.nitem.on { background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 650; }
+.nitem .ic { width: 1.3em; text-align: center; flex: none; }
+.nitem .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nitem .n { color: var(--muted); font-size: .85em; }
+.nitem .n.bad { color: var(--danger); font-weight: 650; }
+.nav hr { border: 0; border-top: 1px solid var(--line); margin: 10px 4px; }
+.nav .ptags { position: relative; border: 0; background: none; padding: 0; top: auto; }
+.nav .ptags > summary { display: none !important; }
+.nav .ptags h3 { display: block !important; }
+.navshade { display: none; }
+
+.lhead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 2px 0 12px; max-width: 980px; }
+.lhead h1 { margin: 0; font-size: calc(24px * var(--fs)); font-weight: 700; }
+.lhead .sub { color: var(--muted); font-size: calc(13px * var(--fs)); }
+.tagfilter { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 2px 4px 2px 10px; font-size: calc(13px * var(--fs)); }
+.tagfilter button { border: 0; background: none; color: var(--muted); padding: 0 6px; }
+.addtask { display: block; width: 100%; max-width: 980px; border: 1px solid transparent; background: color-mix(in srgb, var(--text) 5%, var(--panel)); border-radius: 10px; padding: 11px 14px; margin-bottom: 14px; }
+.addtask:focus { outline: none; border-color: var(--accent); background: var(--panel); }
+.lgroup { max-width: 980px; margin-bottom: 14px; }
+.lgroup > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 2px; font-weight: 700; font-size: calc(14px * var(--fs)); }
+.lgroup > summary::-webkit-details-marker { display: none; }
+.lgroup > summary::before { content: '▾'; color: var(--muted); font-size: .8em; width: 1em; }
+.lgroup:not([open]) > summary::before { content: '▸'; }
+.lgroup > summary .t { color: var(--muted); font-weight: 500; font-size: .85em; }
+.lgroup.over > summary { color: var(--danger); }
+.task.trow { display: flex; align-items: center; gap: 10px; background: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: 9px 4px; margin: 0 !important; }
+.task.trow:hover { background: var(--hover); }
+.task.trow .check { margin: 0; flex: none; }
+.task.trow .body { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.task.trow .title { font-weight: 500; }
+.task.trow .ctx { font-size: calc(12.5px * var(--fs)); }
+.task.trow .rmeta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
+.task.trow .rmeta .dt { font-size: calc(12.5px * var(--fs)); color: var(--muted); white-space: nowrap; }
+.task.trow .rmeta .dt.over { color: var(--danger); }
+.task.trow .rmeta .dur { font-size: calc(11px * var(--fs)); font-weight: 700; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, #0f9b9b 16%, transparent); color: #0f8484; }
+.task.trow .del { opacity: 0; }
+.task.trow:hover .del { opacity: 1; }
+.stline { color: var(--muted); font-size: calc(13px * var(--fs)); margin: -6px 0 14px; max-width: 980px; }
+.stline b { color: var(--text); }
+
 .task {
   display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: start;
   background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
@@ -361,6 +410,20 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   .filters:not(.open) .fchip { display: none; }
   .cols.week { grid-template-columns: 1fr; }
   .projects, .goals { grid-template-columns: 1fr; }
+  .navbtn { display: inline-block; }
+  .shell { grid-template-columns: 1fr; }
+  .nav { position: fixed; z-index: 30; left: 0; top: 0; bottom: 0; width: min(88vw, 420px); max-height: none; min-height: 0; transform: translateX(-102%); transition: transform .2s; box-shadow: 4px 0 24px rgba(0,0,0,.18); background: var(--panel-2); }
+  body.navopen .nav { transform: none; }
+  body.navopen .navshade { display: block; position: fixed; inset: 0; z-index: 29; background: rgba(0,0,0,.35); }
+  .task.trow .del { display: none; }
+  .task.trow { flex-wrap: wrap; align-items: flex-start; }
+  .task.trow .check { margin-top: 6px; }
+  .task.trow .body { flex: 1 1 calc(100% - 50px); }
+  .task.trow .rmeta { flex-basis: 100%; justify-content: flex-start; margin-left: 38px; }
+  .task.trow .rmeta:empty { display: none; }
+  .brand .today { display: none; }
+  .top { gap: 10px; }
+  .addtask { padding: 10px 12px; }
   .pwrap { grid-template-columns: 1fr; gap: 12px; }
   .ptags { position: relative; }
   .ptags summary { display: block; cursor: pointer; padding: 4px 8px; font-weight: 600; color: var(--muted); }
@@ -477,6 +540,7 @@ window.AppSync = (function () {
 
 <header>
   <div class="top">
+    <button class="navbtn" id="navBtn" aria-label="Menu">☰</button>
     <div class="brand">
       <h1>Igor's Tasks</h1>
       <div class="today" id="todayLbl"></div>
@@ -500,7 +564,11 @@ window.AppSync = (function () {
 <div class="quick" id="quickWrap">
   <input id="quick" placeholder="Quick add… e.g.  Call Amanda #FILM #EMP ~15m today   (press Enter)">
 </div>
-<main id="main"></main>
+<div class="shell" id="shell">
+  <aside class="nav" id="nav"></aside>
+  <div class="navshade" id="navShade"></div>
+  <main id="main"></main>
+</div>
 
 <dialog id="dlg">
   <form class="dlg" method="dialog" id="form">
@@ -1037,6 +1105,87 @@ function renderToday() {
     ${doneToday.length ? group('Done today', doneToday, { hideDate: true, compact: true }) : ''}`;
 }
 
+/* ---------- TickTick-style lists: All, Today, Tomorrow, Next 7 Days, Inbox, one project ---------- */
+const LIST_VIEWS = ['all', 'today', 'tomorrow', 'next7', 'inbox', 'proj'];
+let curProj = (() => { try { return localStorage.getItem('igor-proj') || ''; } catch (e) { return ''; } })();
+const isInbox = t => !t.done && !t.date && !t.proj && !taskAllTags(t).length;
+function listScope(v) {
+  const t0 = todayYmd(), t1 = addDays(t0, 1), t6 = addDays(t0, 6);
+  const open = allTasks().filter(x => !x.t.done);
+  const f = v === 'inbox' ? open : open.filter(x => passesFilter(x.t));
+  if (v === 'inbox') return f.filter(x => isInbox(x.t));
+  if (v === 'today') return f.filter(x => x.t.date && x.t.date <= t0);
+  if (v === 'tomorrow') return f.filter(x => x.t.date === t1);
+  if (v === 'next7') return f.filter(x => x.t.date && x.t.date <= t6);
+  if (v === 'proj') return f.filter(x => x.t.proj === curProj);
+  return f;
+}
+function rowHTML(t, s, opts = {}) {
+  const t0 = todayYmd(), over = t.date && !t.done && t.date < t0;
+  const tags = t.tags.map(c => `<span class="chip ${projTag === c ? 'on' : ''}" style="--c:${tagColor(c)}" data-ptag="${esc(c)}" title="Show everything tagged ${esc(tagLabel(c))}">${esc(c.split('/').pop())}</span>`).join('');
+  const proj = t.proj && !opts.hideProject ? `<span class="chip proj" title="Project">▣ ${esc(t.proj)}</span>` : '';
+  const wait = s && isWaiting(s) ? `<span class="chip" style="--c:${OTHER_COLOR}">waiting</span>` : '';
+  const dt = t.date && !opts.hideDate ? `<span class="dt ${over ? 'over' : ''}">${esc(niceDate(t.date))}</span>` : '';
+  return `<div class="task trow ${t.done ? 'done' : ''}" data-id="${t.id}">
+    <button class="check" data-act="toggle" title="${t.done ? 'Mark not done' : 'Mark done'}"></button>
+    <div class="body" data-act="edit"><span class="title">${esc(t.title)}</span>${t.ctx && !opts.compact ? `<span class="ctx">${esc(t.ctx)}</span>` : ''}</div>
+    <div class="rmeta">${t.dur ? `<span class="dur">${durNice(t.dur)}</span>` : ''}${tags}${proj}${wait}${dt}<button class="del" data-act="del" title="Delete task">🗑</button></div>
+  </div>`;
+}
+const VIEW_TITLE = { all: 'All', today: 'Today', tomorrow: 'Tomorrow', next7: 'Next 7 Days', inbox: 'Inbox' };
+function renderList() {
+  const t0 = todayYmd(), t1 = addDays(t0, 1), t6 = addDays(t0, 6);
+  const items = listScope(view);
+  const sum = a => a.reduce((n, x) => n + (x.t.dur || 0), 0);
+  const byDate = (a, b) => (a.t.date || '9999').localeCompare(b.t.date || '9999');
+  const grp = (key, title, list, opts = {}, cls = '') => list.length ? `<details class="lgroup ${cls}" open data-g="${key}"><summary>${title}<span class="t">${list.length}${sum(list) ? ' · ' + durNice(sum(list)) : ''}</span></summary>
+      ${list.map(x => rowHTML(x.t, x.s, opts)).join('')}</details>` : '';
+  const title = view === 'proj' ? '▣ ' + curProj : VIEW_TITLE[view];
+  const tf = projTag && view !== 'inbox' ? `<span class="tagfilter">${projTag === '__none' ? 'No tag' : '# ' + esc(tagLabel(projTag))}<button data-ptag="" title="Clear tag filter">✕</button></span>` : '';
+  const place = view === 'today' ? 'Today' : view === 'tomorrow' ? 'Tomorrow' : view === 'next7' ? 'Today' : view === 'proj' ? curProj
+    : view === 'all' && projTag && projTag !== '__none' ? '# ' + tagLabel(projTag) : 'Inbox';
+  let html = `<div class="lhead"><h1>${esc(title)}</h1>${tf}${view === 'proj' ? `<button class="btn icon" data-editproj="${esc(curProj)}" title="Edit project">✎</button>` : ''}</div>
+    <input class="addtask" data-add placeholder="+ Add task to “${esc(place)}”   e.g. Call Amanda #EMP ~15m tomorrow  (Enter)">`;
+  if (view === 'today') {
+    const doneToday = allTasks().filter(x => x.t.done && x.t.doneDate === t0 && passesFilter(x.t));
+    const r = todayRhythm();
+    html += `<div class="stline"><b>${items.length}</b> to do · <b>${durNice(sum(items))}</b> planned · <b>${doneToday.length}</b> done today${r ? ` · training: <b>${esc(r)}</b>` : ''}</div>`;
+  }
+  if (view === 'all' || view === 'proj') {
+    const b = { over: [], today: [], tom: [], week: [], later: [], none: [] };
+    for (const x of items) { const d = x.t.date; (!d ? b.none : d < t0 ? b.over : d === t0 ? b.today : d === t1 ? b.tom : d <= t6 ? b.week : b.later).push(x); }
+    ['over', 'week', 'later'].forEach(k => b[k].sort(byDate));
+    html += grp('over', 'Overdue', b.over, {}, 'over') + grp('today', 'Today', b.today, { hideDate: true }) + grp('tom', 'Tomorrow', b.tom, { hideDate: true })
+      + grp('week', 'Next 7 Days', b.week) + grp('later', 'Later', b.later) + grp('none', view === 'all' ? 'No date' : 'No date', b.none);
+  } else if (view === 'today') {
+    html += grp('over', 'Overdue', items.filter(x => x.t.date < t0).sort(byDate), {}, 'over') + grp('today', 'Today · ' + shortDate(t0), items.filter(x => x.t.date === t0), { hideDate: true });
+  } else if (view === 'next7') {
+    html += grp('over', 'Overdue', items.filter(x => x.t.date < t0).sort(byDate), {}, 'over');
+    for (let i = 0; i < 7; i++) { const d = addDays(t0, i); html += grp('d' + d, (i === 0 ? 'Today · ' : i === 1 ? 'Tomorrow · ' : '') + shortDate(d), items.filter(x => x.t.date === d), { hideDate: true }); }
+  } else {
+    html += grp('main', view === 'inbox' ? 'To sort' : 'Tomorrow · ' + shortDate(t1), items, { hideDate: view === 'tomorrow' });
+  }
+  if (!items.length) html += `<div class="empty" style="max-width:980px">${view === 'inbox' ? 'Inbox is empty — everything is sorted. 🎉' : 'Nothing here.'}</div>`;
+  if (view === 'inbox') html += `<p class="hint" style="max-width:980px">Inbox holds tasks with no date, no tag and no project. Give a task any of these and it moves out of the Inbox.</p>`;
+  const done = view === 'today' ? allTasks().filter(x => x.t.done && x.t.doneDate === t0 && passesFilter(x.t))
+    : view === 'proj' ? allTasks().filter(x => x.t.done && x.t.proj === curProj) : [];
+  if (done.length) html += `<details class="lgroup" data-g="done"><summary>Completed<span class="t">${done.length}</span></summary>${done.map(x => rowHTML(x.t, x.s, { compact: true })).join('')}</details>`;
+  return html;
+}
+function renderNav() {
+  const t0 = todayYmd();
+  const n = v => listScope(v).length;
+  const over = allTasks().filter(x => !x.t.done && x.t.date && x.t.date < t0 && passesFilter(x.t)).length;
+  const item = (v, ic, label, cnt, extra = '') => `<button class="nitem ${view === v ? 'on' : ''}" data-goview="${v}"><span class="ic">${ic}</span><span class="nm">${label}</span>${cnt != null ? `<span class="n ${extra}">${cnt}</span>` : ''}</button>`;
+  const projs = projects().map(p => { const c = allTasks().filter(x => !x.t.done && x.t.proj === p && passesFilter(x.t)).length;
+    return `<button class="nitem ${view === 'proj' && curProj === p ? 'on' : ''}" data-goproj="${esc(p)}"><span class="ic" style="color:var(--proj)">▣</span><span class="nm">${esc(p)}</span><span class="n">${c || ''}</span></button>`; }).join('');
+  return item('all', '☰', 'All', n('all')) + item('today', '◉', 'Today', n('today'), over ? 'bad' : '') + item('tomorrow', '☀', 'Tomorrow', n('tomorrow'))
+    + item('next7', '7', 'Next 7 Days', n('next7')) + item('inbox', '⇣', 'Inbox', n('inbox'))
+    + `<hr>${renderTagSide(projects(), true)}<hr><h4>Projects</h4>${projs || '<div class="empty" style="padding:2px 10px">No projects yet.</div>'}`
+    + `<button class="nitem" data-newproj><span class="ic">+</span><span class="nm">New project</span></button>`
+    + `<hr><h4>Views</h4>` + item('board', '▦', 'Board', null) + item('week', '▤', 'Week', null) + item('projects', '▣', 'Projects overview', null) + item('gantt', '≡', 'Gantt', null) + item('goals', '◎', 'Goals', null);
+}
+
 function renderBoard() {
   return `<div class="cols board">${doc.sections.map(s => {
     const items = s.items.filter(i => i.rawLine === undefined && passesFilter(i));
@@ -1131,7 +1280,7 @@ function flatTags() {
   const out = [], walk = (n, d) => sortKids(n).forEach(k => { out.push({ path: k.path, depth: d }); walk(k, d + 1); });
   walk(tagTree(projects()), 0); return out;
 }
-function renderTagSide(names) {
+function renderTagSide(names, inNav) {
   const tree = tagTree(names), pv = view === 'projects';
   const openTasks = allTasks().filter(x => !x.t.done);
   const untagged = pv ? names.filter(n => !projTags(n).length).length : openTasks.filter(x => !taskAllTags(x.t).length).length;
@@ -1148,7 +1297,7 @@ function renderTagSide(names) {
   };
   const top = sortKids(tree);
   const wide = !window.matchMedia || !window.matchMedia('(max-width: 640px)').matches;
-  return `<details class="ptags" ${wide || tagsOpenPhone ? 'open' : ''}><summary>Tags${projTag ? ': ' + esc(projTag === '__none' ? 'No tag' : projTag) : ''}</summary>
+  return `<details class="ptags" ${inNav || wide || tagsOpenPhone ? 'open' : ''}><summary>Tags${projTag ? ': ' + esc(projTag === '__none' ? 'No tag' : projTag) : ''}</summary>
     <div class="pthead"><h3>Tags</h3><span class="spacer"></span><button class="tbtn" data-tnew>+ Tag</button><button class="tbtn ${tagEdit ? 'on' : ''}" data-tmode>${tagEdit ? 'Done' : 'Edit'}</button></div>
     ${top.length ? `<div class="tsortrow"><span>Sort</span><select data-tsort>${TAG_SORTS.map(([k, l]) => `<option value="${k}" ${tagSort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
     ${tagEdit ? '<div class="hint" style="padding:2px 8px 6px">Tap a tag to rename, move or delete it.</div>' : ''}
@@ -1309,9 +1458,13 @@ function render() {
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.view === view));
   const g0 = document.getElementById('gantt'); if (g0) ganttScroll = g0.scrollLeft;
   if (projTag && projTag !== '__none' && !allTagPaths().includes(projTag)) { projTag = ''; saveTagUi(); }
-  const body = view === 'today' ? renderToday() : view === 'board' ? renderBoard() : view === 'projects' ? renderProjects() : view === 'goals' ? renderGoals() : view === 'gantt' ? renderGantt() : renderWeek();
-  document.getElementById('main').innerHTML = ['today', 'board', 'week', 'projects'].includes(view)
-    ? `<div class="pwrap">${renderTagSide(projects())}<div class="pmain">${body}</div></div>` : body;
+  if (view === 'proj' && !projects().includes(curProj)) view = 'all';
+  const addFocused = document.activeElement && document.activeElement.matches && document.activeElement.matches('[data-add]');
+  const navEl = document.getElementById('nav'), navScroll = navEl.scrollTop;
+  navEl.innerHTML = renderNav(); navEl.scrollTop = navScroll;
+  document.getElementById('main').innerHTML = LIST_VIEWS.includes(view) ? renderList() : view === 'board' ? renderBoard() : view === 'projects' ? renderProjects() : view === 'goals' ? renderGoals() : view === 'gantt' ? renderGantt() : renderWeek();
+  if (addFocused) { const a = document.querySelector('[data-add]'); if (a) a.focus(); }
+  document.documentElement.style.setProperty('--hdr', document.querySelector('header').offsetHeight + 'px');
   const g = document.getElementById('gantt');
   if (g) {
     if (ganttScroll == null) { const tl = g.querySelector('.g-head .g-today'); ganttScroll = Math.max(0, parseFloat(tl.style.left) - 10 * DW); }
@@ -1330,11 +1483,15 @@ document.getElementById('filters').addEventListener('click', e => {
   render();
 });
 
-const mainEl = document.getElementById('main');
+const mainEl = document.getElementById('shell');
 mainEl.addEventListener('click', e => {
   if (Date.now() - lastTagDrag < 400 || e.target.closest('[data-drag]')) { e.preventDefault(); return; }
   const w = e.target.closest('[data-week]');
   if (w) { weekOffset = w.dataset.week === '0' ? 0 : weekOffset + Number(w.dataset.week); render(); return; }
+  const gv = e.target.closest('[data-goview]');
+  if (gv) { view = gv.dataset.goview; try { localStorage.setItem('igor-view', view); } catch (er) {} document.body.classList.remove('navopen'); render(); window.scrollTo(0, 0); return; }
+  const gp = e.target.closest('[data-goproj]');
+  if (gp) { view = 'proj'; curProj = gp.dataset.goproj; try { localStorage.setItem('igor-view', view); localStorage.setItem('igor-proj', curProj); } catch (er) {} document.body.classList.remove('navopen'); render(); window.scrollTo(0, 0); return; }
   const ap = e.target.closest('[data-addproj]');
   if (ap) { presetProj = ap.dataset.addproj; openEditor(null); return; }
   if (e.target.closest('[data-newproj]')) { openProjEditor(null); return; }
@@ -1397,6 +1554,25 @@ mainEl.addEventListener('drop', e => {
   dragId = null; save();
 });
 
+mainEl.addEventListener('keydown', e => {
+  const inp = e.target.closest('[data-add]'); if (!inp || e.key !== 'Enter') return;
+  let txt = inp.value.trim(); if (!txt) return;
+  let date = null;
+  txt = txt.replace(/(^|\s)(today|danes)(?=\s|$)/i, (_, sp) => { date = todayYmd(); return sp; })
+           .replace(/(^|\s)(tomorrow|jutri)(?=\s|$)/i, (_, sp) => { date = addDays(todayYmd(), 1); return sp; });
+  const t = parseTaskLine('- [ ] ' + txt.trim());
+  if (!t || !t.title) return;
+  t.tags = [...new Set(t.tags.map(resolveTag))];
+  if (date && !t.date) t.date = date;
+  if (!t.date && (view === 'today' || view === 'next7')) t.date = todayYmd();
+  if (!t.date && view === 'tomorrow') t.date = addDays(todayYmd(), 1);
+  if (view === 'proj' && !t.proj) t.proj = curProj;
+  if (projTag && projTag !== '__none' && view !== 'inbox' && !t.tags.length) t.tags.push(projTag);
+  activeSection().items.push(t);
+  inp.value = '';
+  save();
+  toast(isInbox(t) ? 'Added to Inbox' : 'Task added');
+});
 document.getElementById('quick').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   let txt = e.target.value.trim(); if (!txt) return;
@@ -1418,7 +1594,8 @@ const $ = id => document.getElementById(id);
 function openEditor(id) {
   const hit = id ? findTask(id) : null;
   editing = hit ? hit.t.id : null;
-  const t = hit ? hit.t : { title: '', ctx: '', tags: [], proj: presetProj || '', dur: 0, date: view === 'today' && !presetProj ? todayYmd() : null, notes: [] };
+  if (!id && !presetProj && view === 'proj') presetProj = curProj;
+  const t = hit ? hit.t : { title: '', ctx: '', tags: [], proj: presetProj || '', dur: 0, date: presetProj ? null : (view === 'today' || view === 'next7') ? todayYmd() : view === 'tomorrow' ? addDays(todayYmd(), 1) : null, notes: [] };
   presetProj = null;
   $('fProj').value = t.proj || '';
   $('projList').innerHTML = projects().map(p => `<option value="${esc(p)}">`).join('');
@@ -1748,8 +1925,12 @@ function moveTagTo(path, { prev, prevDepth, depth }) {
   else setText('PROJECTS', withTagList(ST.text.PROJECTS, list));
 }
 
+$('navBtn').onclick = () => document.body.classList.toggle('navopen');
+$('navShade').onclick = () => document.body.classList.remove('navopen');
+document.addEventListener('click', e => { if (document.body.classList.contains('navopen') && e.target.closest('#nav [data-ptag]') && !e.target.closest('[data-drag]')) setTimeout(() => document.body.classList.remove('navopen'), 150); });
+
 (async function init() {
-  try { const v = localStorage.getItem('igor-view'); if (['today', 'board', 'week', 'projects', 'gantt', 'goals'].includes(v)) view = v; } catch (e) {}
+  try { const v = localStorage.getItem('igor-view'); if ([...LIST_VIEWS, 'board', 'week', 'projects', 'gantt', 'goals'].includes(v)) view = v; } catch (e) {}
   applyAll(); render(); showSync(); renderLinkBar();
   sync();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { render(); sync(); } });
