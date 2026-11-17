@@ -184,6 +184,13 @@ header { padding-bottom: 12px; }
 .sub.done .sbox::after { content: "✓"; color: var(--accent-text); font-size: calc(10px * var(--fs)); font-weight: 700; }
 .sub.done .stxt { text-decoration: line-through; color: var(--muted); }
 .stxt { overflow-wrap: anywhere; }
+.smeta { font-size: calc(11.5px * var(--fs)); color: var(--muted); white-space: nowrap; align-self: center; }
+.smeta.over { color: var(--danger); }
+.sub .sout { display: none; margin-left: auto; border: 1px solid var(--line); background: var(--panel-2, transparent); border-radius: 6px; padding: 0 8px; cursor: pointer; color: var(--muted); font-size: calc(13px * var(--fs)); }
+body.selmode .sub .sout { display: inline-block; }
+@media (hover: hover) { .sub:hover .sout { display: inline-block; } }
+.sub[draggable="true"] { cursor: grab; }
+body.pickparent .task { outline: 2px dashed var(--accent); outline-offset: -2px; }
 .scount { font-size: calc(11.5px * var(--fs)); font-weight: 600; color: var(--muted); white-space: nowrap; }
 .scount.all { color: var(--accent); }
 .notes { margin: 4px 0 0; padding-left: 16px; color: var(--muted); font-size: calc(12.5px * var(--fs)); }
@@ -450,6 +457,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .task.sel { outline: 2px solid var(--accent); outline-offset: -1px; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
 body.selmode .task .body, body.selmode .task .check, body.selmode .task .del { pointer-events: none; }
 body.selmode .task { cursor: pointer; }
+body.selmode .task .sout { pointer-events: auto; }
 .task.drop { outline: 2px dashed var(--accent); outline-offset: -1px; }
 .ptag.drop { outline: 2px dashed var(--accent); outline-offset: -2px; background: color-mix(in srgb, var(--accent) 12%, transparent); }
 body.dragging-tasks .ptag[data-tagdrop] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
@@ -1107,7 +1115,38 @@ function subsHTML(t, opts = {}) {
   const d = ss.filter(x => x.done).length;
   const count = `<span class="scount ${d === ss.length ? 'all' : ''}" title="Subtasks done">☑ ${d}/${ss.length}</span>`;
   if (opts.compact) return count;
-  return `<div class="subs">${ss.map((x, i) => `<div class="sub ${x.done ? 'done' : ''}" data-act="sub" data-i="${i}" title="${x.done ? 'Mark not done' : 'Mark done'}"><span class="sbox"></span><span class="stxt">${esc(x.text)}</span></div>`).join('')}</div>`;
+  return `<div class="subs">${ss.map((x, i) => { const q = subInfo(x);
+    const meta = [q.date ? `<span class="smeta ${!x.done && q.date < todayYmd() ? 'over' : ''}">📅 ${esc(niceDate(q.date))}</span>` : '', ...q.tags.map(c => `<span class="smeta" style="color:${tagColor(c)}">${esc(tagLabel(c))}</span>`)].join('');
+    return `<div class="sub ${x.done ? 'done' : ''}" draggable="true" data-act="sub" data-i="${i}" title="${x.done ? 'Mark not done' : 'Mark done'} · drag it out to make it a task again"><span class="sbox"></span><span class="stxt">${esc(q.title)}</span>${meta}<button class="sout" data-act="subout" data-i="${i}" title="Make it a task again">⤴</button></div>`; }).join('')}</div>`;
+}
+function subInfo(x) { const q = parseTaskLine('- [ ] ' + x.text) || { title: x.text, tags: [], date: null }; idSeq--; if (!q.title) q.title = x.text; return q; }
+/* put tasks under another task: they become its subtasks (keeping their tags/date in the line) */
+function makeSub(ids, parentId) {
+  const ph = findTask(parentId); if (!ph) return 0;
+  const P = ph.t; P.subs = P.subs || []; let n = 0;
+  for (const id of ids) {
+    if (id === parentId) continue;
+    const h = findTask(id); if (!h) continue;
+    const t = h.t, line = taskToLines(t)[0].replace(/^\s*- \[( |x|X)\]\s*/, '').replace(/~~/g, '').replace(/\s*\(done [^)]*\)/, '');
+    P.subs.push({ text: line, done: t.done });
+    for (const x of (t.subs || [])) P.subs.push(x);
+    for (const nt of (t.notes || [])) P.notes.push(nt);
+    h.s.items.splice(h.s.items.indexOf(t), 1); sel.delete(id); n++;
+  }
+  if (n) { P.raw = null; save(); toast(`${n} task${n > 1 ? 's' : ''} moved under “${P.title}”`); }
+  return n;
+}
+/* take a subtask out: it becomes a normal task again (right after its parent, or in the given section) */
+function subOut(parentId, i, secName, toParentId) {
+  const ph = findTask(parentId); if (!ph || !ph.t.subs || !ph.t.subs[i]) return;
+  const [x] = ph.t.subs.splice(i, 1); ph.t.raw = null;
+  if (toParentId != null) { const th = findTask(toParentId); if (th) { th.t.subs = th.t.subs || []; th.t.subs.push(x); th.t.raw = null; save(); toast(`Moved under “${th.t.title}”`); return; } }
+  const t = parseTaskLine(`- [${x.done ? 'x' : ' '}] ` + x.text); t.raw = null; if (!t.title) t.title = x.text;
+  if (!t.proj && ph.t.proj) t.proj = ph.t.proj;
+  if (t.done && !t.doneDate) t.doneDate = todayYmd();
+  const target = secName ? sectionByName(secName) : ph.s;
+  if (target === ph.s) target.items.splice(target.items.indexOf(ph.t) + 1, 0, t); else target.items.push(t);
+  save(); toast(`“${t.title}” is a task again`);
 }
 function subCount(t) { const ss = t.subs || []; if (!ss.length) return ''; const d = ss.filter(x => x.done).length; return `<span class="scount ${d === ss.length ? 'all' : ''}">☑ ${d}/${ss.length}</span>`; }
 function taskHTML(t, opts = {}) {
@@ -1604,6 +1643,9 @@ mainEl.addEventListener('click', e => {
   const ga = e.target.closest('[data-gall]');
   if (ga) { if (ganttOpen.size) ganttOpen.clear(); else projects().forEach(p => ganttOpen.add(p)); render(); return; }
   const tk = e.target.closest('.task');
+  const so = e.target.closest('[data-act="subout"]');
+  if (so && tk) { subOut(Number(tk.dataset.id), Number(so.dataset.i)); return; }
+  if (tk && pickParent) { const pid = Number(tk.dataset.id), ids = [...sel].filter(x => x !== pid); pickParent = false; document.body.classList.remove('pickparent'); if (ids.length) { makeSub(ids, pid); clearSel(); } else toast('Pick a different task'); return; }
   if (tk && (selMode || e.ctrlKey || e.metaKey || e.shiftKey)) { toggleSel(Number(tk.dataset.id)); return; }
   const el = e.target.closest('[data-act]'); if (!el) return;
   const id = Number(el.closest('.task').dataset.id);
@@ -1624,8 +1666,11 @@ function deleteTask(id, btn) {
   render(); save();
 }
 
-let dragId = null, dragIds = [], dragTag = null;
+let dragId = null, dragIds = [], dragTag = null, dragSub = null, pickParent = false;
 mainEl.addEventListener('dragstart', e => {
+  const sb = e.target.closest && e.target.closest('.sub');
+  if (sb) { const pt = sb.closest('.task'); dragSub = { pid: Number(pt.dataset.id), i: Number(sb.dataset.i) }; dragId = null; dragIds = []; dragTag = null;
+    e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', 'sub'); } catch (er) {} document.body.classList.add('dragging-tasks'); e.stopPropagation(); return; }
   const tr = e.target.closest('[data-tagdrop]');
   if (tr && !e.target.closest('.task')) {           // a tag from the tag list, to drop on a task
     if (e.target.closest('[data-drag]')) { e.preventDefault(); return; }
@@ -1645,12 +1690,18 @@ mainEl.addEventListener('dragend', e => { const t = e.target.closest('.task'); i
 function endDrag() {
   document.body.classList.remove('dragging-tasks', 'dragging-tag');
   document.querySelectorAll('.drop').forEach(x => x.classList.remove('drop'));
-  dragId = null; dragIds = []; dragTag = null;
+  dragId = null; dragIds = []; dragTag = null; dragSub = null;
 }
 mainEl.addEventListener('dragover', e => {
   if (dragTag) { const t = e.target.closest('.task'); if (!t) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
     document.querySelectorAll('.task.drop').forEach(x => x !== t && x.classList.remove('drop')); t.classList.add('drop'); return; }
+  if (dragSub) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const t = e.target.closest('.task');
+    document.querySelectorAll('.task.drop').forEach(x => x !== t && x.classList.remove('drop'));
+    if (t && Number(t.dataset.id) !== dragSub.pid) t.classList.add('drop'); return; }
   if (dragId == null) return;
+  const tk = e.target.closest('.task');
+  if (tk && !dragIds.includes(Number(tk.dataset.id))) { e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.drop').forEach(x => x !== tk && x.classList.remove('drop')); tk.classList.add('drop'); return; }
   const tg = e.target.closest('[data-tagdrop]');
   if (tg) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; document.querySelectorAll('[data-tagdrop].drop').forEach(x => x !== tg && x.classList.remove('drop')); tg.classList.add('drop'); return; }
   const c = e.target.closest('.col'); if (!c) return;
@@ -1663,7 +1714,12 @@ mainEl.addEventListener('drop', e => {
     const id = Number(t.dataset.id), tag = dragTag;
     endDrag(); applyTag(sel.has(id) ? [...sel] : [id], tag); return;
   }
+  if (dragSub) { e.preventDefault(); const d = dragSub, t = e.target.closest('.task'), c = e.target.closest('.col'); endDrag();
+    if (t && Number(t.dataset.id) === d.pid) return;
+    subOut(d.pid, d.i, c && c.dataset.sec, t ? Number(t.dataset.id) : null); return; }
   if (dragId == null) return;
+  const tk = e.target.closest('.task');
+  if (tk && !dragIds.includes(Number(tk.dataset.id))) { e.preventDefault(); const ids = dragIds.slice(), pid = Number(tk.dataset.id); endDrag(); makeSub(ids, pid); return; }
   const tg = e.target.closest('[data-tagdrop]');
   if (tg) { e.preventDefault(); const ids = dragIds.slice(), tag = tg.dataset.tagdrop; endDrag(); applyTag(ids, tag); return; }
   const c = e.target.closest('.col'); if (!c) return;
@@ -1698,12 +1754,13 @@ function renderSelBar() {
   bar.className = 'show';
   bar.innerHTML = `<div class="sb-top"><b>${sel.size ? sel.size + ' selected' : 'Tap tasks to select them'}</b>
       <span class="sb-hint">${sel.size ? 'Tap a tag to add it (tap again to remove)' : ''}</span>
-      <button class="btn" data-sact="new">+ New tag</button><button class="btn" data-sact="done">Done</button></div>
+      ${sel.size ? '<button class="btn" data-sact="under">↳ Put under a task</button>' : ''}<button class="btn" data-sact="new">+ New tag</button><button class="btn" data-sact="done">Done</button></div>
     <div class="sb-tags">${allTagPaths().map(chip).join('')}</div>`;
 }
 function selBarClick(e) {
   const a = e.target.closest('[data-sact]');
-  if (a && a.dataset.sact === 'done') { clearSel(); return; }
+  if (a && a.dataset.sact === 'done') { clearSel(); pickParent = false; document.body.classList.remove('pickparent'); return; }
+  if (a && a.dataset.sact === 'under') { pickParent = true; document.body.classList.add('pickparent'); toast('Now tap the task to put them under'); return; }
   if (a && a.dataset.sact === 'new') {
     if (!sel.size) { toast('Select tasks first'); return; }
     const v = (prompt('New tag (use / for a sub-tag, e.g. PRO/FILM):') || '').trim().replace(/^#/, '').replace(/\s+/g, '-');
@@ -1763,6 +1820,7 @@ document.getElementById('quick').addEventListener('keydown', e => {
   save();
 });
 
+let editSubs = [];
 const dlg = document.getElementById('dlg');
 const $ = id => document.getElementById(id);
 function openEditor(id) {
@@ -1783,7 +1841,8 @@ function openEditor(id) {
   $('fDate').value = t.date || '';
   $('fSec').innerHTML = doc.sections.map(s => `<option ${hit ? (hit.s === s ? 'selected' : '') : (s === activeSection() ? 'selected' : '')}>${esc(s.name)}</option>`).join('');
   $('fNotes').value = t.notes.join('\n');
-  $('fSubs').value = (t.subs || []).map(x => (x.done ? '[x] ' : '') + x.text).join('\n');
+  editSubs = (t.subs || []).map(x => ({ ...x, title: subInfo(x).title }));
+  $('fSubs').value = editSubs.map(x => (x.done ? '[x] ' : '') + x.title).join('\n');
   $('delBtn').style.display = hit ? '' : 'none';
   dlg.showModal(); $('fTitle').focus();
 }
@@ -1821,7 +1880,7 @@ $('form').addEventListener('submit', e => {
     title, ctx: $('fCtx').value.trim(), tags,
     dur: Number($('fDur').value) || 0, date: $('fDate').value || null,
     notes: $('fNotes').value.split('\n').map(s => s.trim()).filter(Boolean),
-    subs: $('fSubs').value.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^\[( |x|X)\]\s*(.*)$/); return m ? { text: m[2], done: m[1] !== ' ' } : { text: s, done: false }; }).filter(x => x.text), raw: null,
+    subs: $('fSubs').value.split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^\[( |x|X)\]\s*(.*)$/); const o = m ? { text: m[2], done: m[1] !== ' ' } : { text: s, done: false }; const k = editSubs.find(x => x.title === o.text && !x.used); if (k) { k.used = true; o.text = k.text; } return o; }).filter(x => x.text), raw: null,
   };
   const secName = $('fSec').value;
   if (editing) {
