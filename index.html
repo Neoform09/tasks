@@ -216,6 +216,11 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .pbarTop { display: flex; justify-content: flex-end; margin-bottom: 14px; }
 .pwrap { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 20px; align-items: start; }
 .ptags { position: sticky; top: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 10px 8px; font-size: calc(14px * var(--fs)); }
+.pthead { display: flex; align-items: center; gap: 4px; margin: 0 0 6px; }
+.pthead h3 { margin: 2px 8px !important; }
+.tbtn { border: 1px solid var(--line); background: var(--panel); color: var(--muted); font: inherit; font-size: .82em; padding: 2px 8px; border-radius: 999px; cursor: pointer; }
+.tbtn:hover { color: var(--text); }
+.tbtn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .ptags h3 { margin: 2px 8px 8px; font-size: calc(12px * var(--fs)); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 650; }
 .ptags summary { display: none; }
 .ptag { display: flex; align-items: center; gap: 4px; width: 100%; border: 0; background: none; color: var(--text); font: inherit; text-align: left; padding: 5px 8px; border-radius: 8px; cursor: pointer; }
@@ -350,6 +355,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   .ptags { position: static; }
   .ptags summary { display: block; cursor: pointer; padding: 4px 8px; font-weight: 600; color: var(--muted); }
   .ptags h3 { display: none; }
+  .pthead { justify-content: flex-end; }
   .ptags:not([open]) > :not(summary) { display: none; }
   .task { padding: 12px; grid-template-columns: 30px 1fr; }
   .task .right { grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: center; }
@@ -511,6 +517,21 @@ window.AppSync = (function () {
       <button type="button" class="btn danger" id="delBtn">Delete</button>
       <div class="spacer"></div>
       <button type="button" class="btn" id="cancelBtn">Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="tdlg">
+  <form class="dlg" method="dialog" id="tform">
+    <h2 id="tdlgTitle">Tag</h2>
+    <label class="field"><span>Under (parent tag)</span><select id="tParent"></select></label>
+    <label class="field"><span>Name</span><input id="tName" required placeholder="e.g. Murgle" autocomplete="off"></label>
+    <div class="hint" id="tInfo"></div>
+    <div class="actions">
+      <button type="button" class="btn danger" id="tDelBtn">Delete tag</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn" id="tCancelBtn">Cancel</button>
       <button type="submit" class="btn primary">Save</button>
     </div>
   </form>
@@ -692,17 +713,18 @@ const SKEY = 'tasks-state';
 let ST = (() => { try { return JSON.parse(localStorage.getItem(SKEY)) || null; } catch (e) { return null; } })()
   || { text: { TASKS: '', PROJECTS: '', GOALS: '' }, base: {}, fbase: {} };
 ST.base = ST.base || {}; ST.fbase = ST.fbase || {};
-let goalsText = null, goals = null, projText = null, projList = [];
+let goalsText = null, goals = null, projText = null, projList = [], tagList = [];
 let lastSync = 0, syncErr = '', syncing = false, syncAgain = false, syncTimer = null;
 
 const persist = () => { try { localStorage.setItem(SKEY, JSON.stringify(ST)); } catch (e) {} };
 const syncPass = () => { try { return JSON.parse(localStorage.getItem('appsync-pass')) || ''; } catch (e) { return ''; } };
-const dlgOpen = () => document.getElementById('dlg').open || document.getElementById('pdlg').open;
+const dlgOpen = () => ['dlg', 'pdlg', 'tdlg'].some(id => document.getElementById(id).open);
 
 function applyAll() {
   doc = parseDoc(ST.text.TASKS || '# Tasks');
   goalsText = ST.text.GOALS; goals = goalsText ? parseGoals(goalsText) : null;
   projText = ST.text.PROJECTS; projList = projText ? parseProjects(projText) : [];
+  tagList = projText ? parseTagList(projText) : [];
 }
 function setText(k, text) {
   ST.text[k] = text; persist(); applyAll(); render();
@@ -869,7 +891,8 @@ function parseProjects(text) {
   const out = []; let kind = 'project';
   for (const line of text.split(/\r?\n/)) {
     const h = line.match(/^##\s+(.+?)\s*$/);
-    if (h) { kind = /area/i.test(h[1]) ? 'area' : /archiv|done/i.test(h[1]) ? 'archived' : 'project'; continue; }
+    if (h) { kind = /^tags?$/i.test(h[1].trim()) ? 'tagsec' : /area/i.test(h[1]) ? 'area' : /archiv|done/i.test(h[1]) ? 'archived' : 'project'; continue; }
+    if (kind === 'tagsec') continue;
     const m = line.match(/^\s*-\s+\*\*(.+?)\*\*(.*)$/); if (!m) continue;
     const p = { name: m[1].trim(), kind, desc: '', start: null, deadline: null, tags: [] };
     let rest = m[2];
@@ -1056,12 +1079,20 @@ function daysLeftTxt(s) {
 }
 
 /* ---------- project tag tree (left side) ---------- */
-let tagsOpenPhone = false;
+let tagsOpenPhone = false, tagEdit = false;
 let projTag = (() => { try { return localStorage.getItem('igor-ptag') || ''; } catch (e) { return ''; } })();
 const tagClosed = new Set((() => { try { return JSON.parse(localStorage.getItem('igor-ptag-closed')) || []; } catch (e) { return []; } })());
 const saveTagUi = () => { try { localStorage.setItem('igor-ptag', projTag); localStorage.setItem('igor-ptag-closed', JSON.stringify([...tagClosed])); } catch (e) {} };
 function tagTree(names) {
   const root = { kids: new Map() };
+  for (const t of tagList) {
+    let node = root, path = '';
+    for (const part of t.split('/')) {
+      path = path ? path + '/' + part : part;
+      if (!node.kids.has(part)) node.kids.set(part, { name: part, path, kids: new Map(), projs: new Set() });
+      node = node.kids.get(part);
+    }
+  }
   for (const n of names) for (const t of projTags(n)) {
     let node = root, path = '';
     for (const part of t.split('/')) {
@@ -1078,15 +1109,16 @@ function renderTagSide(names) {
     const kids = [...node.kids.values()].sort((a, b) => a.name.localeCompare(b.name));
     const open = !tagClosed.has(node.path);
     const tw = kids.length ? `<span class="tw" data-ptoggle="${esc(node.path)}">${open ? '▾' : '▸'}</span>` : `<span class="tw"></span>`;
-    return `<button class="ptag ${projTag === node.path ? 'on' : ''}" data-ptag="${esc(node.path)}" style="padding-left:${8 + depth * 16}px" title="${esc(node.path)}">${tw}<span class="nm">${esc(node.name)}</span><span class="n">${node.projs.size}</span></button>`
+    return `<button class="ptag ${projTag === node.path && !tagEdit ? 'on' : ''}" ${tagEdit ? `data-tedit="${esc(node.path)}"` : `data-ptag="${esc(node.path)}"`} style="padding-left:${8 + depth * 16}px" title="${esc(node.path)}">${tw}<span class="nm">${esc(node.name)}</span>${tagEdit ? '<span class="n">✎</span>' : `<span class="n">${node.projs.size}</span>`}</button>`
       + (open ? kids.map(k => row(k, depth + 1)).join('') : '');
   };
   const top = [...tree.kids.values()].sort((a, b) => a.name.localeCompare(b.name));
   const wide = !window.matchMedia || !window.matchMedia('(max-width: 640px)').matches;
   return `<details class="ptags" ${wide || tagsOpenPhone ? 'open' : ''}><summary>Tags${projTag ? ': ' + esc(projTag === '__none' ? 'No tag' : projTag) : ''}</summary>
-    <h3>Tags</h3>
+    <div class="pthead"><h3>Tags</h3><span class="spacer"></span><button class="tbtn" data-tnew>+ Tag</button><button class="tbtn ${tagEdit ? 'on' : ''}" data-tmode>${tagEdit ? 'Done' : 'Edit'}</button></div>
+    ${tagEdit ? '<div class="hint" style="padding:2px 8px 6px">Tap a tag to rename, move or delete it.</div>' : ''}
     <button class="ptag ${!projTag ? 'on' : ''}" data-ptag=""><span class="tw"></span><span class="nm">All projects</span><span class="n">${names.length}</span></button>
-    <hr>${top.map(n => row(n, 0)).join('') || '<div class="empty" style="padding:4px 8px">No tags yet — add them with ✎ on a project.</div>'}
+    <hr>${top.map(n => row(n, 0)).join('') || '<div class="empty" style="padding:4px 8px">No tags yet — tap <b>+ Tag</b>, or add them with ✎ on a project.</div>'}
     ${untagged && top.length ? `<hr><button class="ptag ${projTag === '__none' ? 'on' : ''}" data-ptag="__none"><span class="tw"></span><span class="nm">No tag</span><span class="n">${untagged}</span></button>` : ''}
   </details>`;
 }
@@ -1270,6 +1302,10 @@ mainEl.addEventListener('click', e => {
   if (e.target.closest('[data-newproj]')) { openProjEditor(null); return; }
   const sm = e.target.closest('.ptags > summary');
   if (sm) { tagsOpenPhone = !sm.parentElement.open; return; }
+  if (e.target.closest('[data-tmode]')) { e.preventDefault(); tagEdit = !tagEdit; render(); return; }
+  if (e.target.closest('[data-tnew]')) { e.preventDefault(); openTagEditor(null); return; }
+  const te = e.target.closest('[data-tedit]');
+  if (te && !e.target.closest('[data-ptoggle]')) { e.preventDefault(); openTagEditor(te.dataset.tedit); return; }
   const tt = e.target.closest('[data-ptoggle]');
   if (tt) { e.preventDefault(); const k = tt.dataset.ptoggle; tagClosed.has(k) ? tagClosed.delete(k) : tagClosed.add(k); saveTagUi(); render(); return; }
   const pt = e.target.closest('[data-ptag]');
@@ -1407,7 +1443,60 @@ function projLine(p) {
   for (const t of p.tags || []) l += ' #' + t;
   return l;
 }
-function kindOfHead(h) { return /area/i.test(h) ? 'area' : /archiv|done/i.test(h) ? 'archived' : 'project'; }
+function kindOfHead(h) { return /^tags?$/i.test(h.trim()) ? 'tagsec' : /area/i.test(h) ? 'area' : /archiv|done/i.test(h) ? 'archived' : 'project'; }
+// tags that exist on their own (also before any project uses them): "## Tags" section of PROJECTS.md
+function parseTagList(text) {
+  const out = []; let on = false;
+  for (const line of text.split(/\r?\n/)) {
+    const h = line.match(/^##\s+(.+?)\s*$/);
+    if (h) { on = /^tags?$/i.test(h[1].trim()); continue; }
+    if (!on) continue;
+    const m = line.match(/^\s*-\s+(.+)$/); if (!m) continue;
+    const t = cleanTag(m[1].trim().replace(/\s+/g, '-')); if (t && !out.includes(t)) out.push(t);
+  }
+  return out;
+}
+// PROJECTS.md text with the "## Tags" section replaced by this list
+function withTagList(text, list) {
+  const lines = norm(text || '# Projects\n').split('\n'), out = []; let skip = false;
+  for (const l of lines) {
+    const h = l.match(/^##\s+(.+?)\s*$/);
+    if (h) skip = /^tags?$/i.test(h[1].trim());
+    if (!skip) out.push(l);
+  }
+  while (out.length && !out[out.length - 1].trim()) out.pop();
+  const uniq = [...new Set(list)].sort((a, b) => a.localeCompare(b));
+  if (uniq.length) out.push('', '## Tags', ...uniq.map(t => '- ' + t));
+  return out.join('\n') + '\n';
+}
+// rewrite one project's line in place (keeps its position)
+function replaceProjLine(text, name, p) {
+  return norm(text).split('\n').map(l => projLineRe(name).test(l) ? projLine(p) : l).join('\n');
+}
+const allTagPaths = () => {
+  const set = new Set();
+  for (const t of [...tagList, ...projList.flatMap(p => p.tags || [])]) { const parts = t.split('/'); parts.forEach((_, i) => set.add(parts.slice(0, i + 1).join('/'))); }
+  return [...set].sort((a, b) => a.localeCompare(b));
+};
+const underTag = (t, path) => t === path || t.startsWith(path + '/');
+// rename/move a tag (and its sub-tags) everywhere; to=null deletes it
+function retag(from, to) {
+  let text = ST.text.PROJECTS || '# Projects\n', n = 0;
+  const map = t => !underTag(t, from) ? t : to === null ? null : to + t.slice(from.length);
+  for (const p of projList) {
+    if (!(p.tags || []).some(t => underTag(t, from))) continue;
+    const tags = [...new Set(p.tags.map(map).filter(Boolean))];
+    text = replaceProjLine(text, p.name, { ...p, tags }); n++;
+  }
+  let list = tagList.map(map).filter(Boolean);
+  if (to !== null && !list.some(t => underTag(t, to))) list.push(to);
+  text = withTagList(text, list);
+  if (projTag && underTag(projTag, from)) projTag = to === null ? '' : to + projTag.slice(from.length);
+  [...tagClosed].forEach(k => { if (underTag(k, from)) { tagClosed.delete(k); if (to !== null) tagClosed.add(to + k.slice(from.length)); } });
+  saveTagUi();
+  setText('PROJECTS', text);
+  return n;
+}
 // returns PROJECTS.md text with the old project's line removed and (optionally) a new line added in the right section
 function editProjectsText(oldName, p) {
   let lines = norm(ST.text.PROJECTS || '# Projects\n').split('\n');
@@ -1415,8 +1504,10 @@ function editProjectsText(oldName, p) {
   if (!p) return lines.join('\n');
   let h = lines.findIndex(l => /^##\s/.test(l) && kindOfHead(l.replace(/^##\s+/, '')) === p.kind);
   if (h < 0) {
-    while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
-    lines.push('', '## ' + KIND_HEAD[p.kind]); h = lines.length - 1;
+    let ti = lines.findIndex(l => /^##\s+tags?\s*$/i.test(l));
+    if (ti < 0) { while (lines.length && !lines[lines.length - 1].trim()) lines.pop(); ti = lines.length; }
+    const lead = ti > 0 && lines[ti - 1].trim() ? [''] : [];
+    lines.splice(ti, 0, ...lead, '## ' + KIND_HEAD[p.kind], ''); h = ti + lead.length;
   }
   let at = h + 1;
   while (at < lines.length && !/^##\s/.test(lines[at])) at++;
@@ -1439,7 +1530,7 @@ function openProjEditor(name) {
   $('pdlg').showModal(); $('pName').focus();
 }
 $('pCancelBtn').onclick = () => $('pdlg').close();
-const allProjTags = () => [...new Set(projList.flatMap(p => p.tags || []))].sort((a, b) => a.localeCompare(b));
+const allProjTags = () => [...new Set([...tagList, ...projList.flatMap(p => p.tags || [])])].sort((a, b) => a.localeCompare(b));
 const typedTags = () => [...new Set($('pTags').value.split(/[\s,]+/).map(cleanTag).filter(Boolean))];
 function renderTagPick() {
   const cur = typedTags();
@@ -1485,6 +1576,43 @@ $('pDelBtn').onclick = () => {
   $('pdlg').close();
   setText('PROJECTS', ST.text.PROJECTS);
   toast('Project deleted');
+};
+
+/* ---------- add / rename / move / delete tags ---------- */
+let editingTag = null;
+function openTagEditor(path) {
+  editingTag = path;
+  const i = path ? path.lastIndexOf('/') : -1;
+  const parent = path ? (i > 0 ? path.slice(0, i) : '') : (projTag && projTag !== '__none' ? projTag : '');
+  const opts = allTagPaths().filter(t => !path || !underTag(t, path));
+  $('tParent').innerHTML = `<option value="">— top level —</option>` + opts.map(t => `<option value="${esc(t)}" ${t === parent ? 'selected' : ''}>${esc(t.split('/').join(' › '))}</option>`).join('');
+  $('tName').value = path ? path.slice(i + 1) : '';
+  const n = path ? projList.filter(p => (p.tags || []).some(t => underTag(t, path))).length : 0;
+  $('tdlgTitle').textContent = path ? 'Edit tag' : 'New tag';
+  $('tInfo').textContent = path ? `Used by ${n} project${n === 1 ? '' : 's'}. Changes apply to all of them${allTagPaths().some(t => t.startsWith(path + '/')) ? ' and to its sub-tags' : ''}.` : 'Tip: pick a parent to make it a sub-tag.';
+  $('tDelBtn').style.display = path ? '' : 'none';
+  $('tdlg').showModal(); $('tName').focus();
+}
+$('tCancelBtn').onclick = () => $('tdlg').close();
+$('tdlg').addEventListener('close', () => render());
+$('tform').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('tName').value.trim().replace(/[\/#]/g, '-').replace(/\s+/g, '-'); if (!name) return;
+  const parent = $('tParent').value, path = parent ? parent + '/' + name : name;
+  if (path !== editingTag && allTagPaths().includes(path)) { toast('That tag already exists'); return; }
+  $('tdlg').close();
+  if (!editingTag) { setText('PROJECTS', withTagList(ST.text.PROJECTS, [...tagList, path])); toast('Tag added'); return; }
+  if (path === editingTag) return;
+  const n = retag(editingTag, path);
+  toast(n ? `Tag changed in ${n} project${n === 1 ? '' : 's'}` : 'Tag changed');
+});
+$('tDelBtn').onclick = () => {
+  const b = $('tDelBtn');
+  if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Click again to delete'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Delete tag'; }, 3000); return; }
+  delete b.dataset.armed; b.textContent = 'Delete tag';
+  const path = editingTag; $('tdlg').close();
+  const n = retag(path, null);
+  toast(n ? `Tag removed from ${n} project${n === 1 ? '' : 's'} (projects kept)` : 'Tag deleted');
 };
 
 (async function init() {
