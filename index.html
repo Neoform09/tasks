@@ -328,7 +328,6 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   .task { padding: 12px; grid-template-columns: 30px 1fr; }
   .task .right { grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: center; }
   .check { transform: scale(1.5); transform-origin: 50% 40%; margin: 6px 4px 0 2px; }
-  .linkbar { display: none; }
 }
 </style>
 </head>
@@ -646,7 +645,6 @@ let ST = (() => { try { return JSON.parse(localStorage.getItem(SKEY)) || null; }
 ST.base = ST.base || {}; ST.fbase = ST.fbase || {};
 let goalsText = null, goals = null, projText = null, projList = [];
 let lastSync = 0, syncErr = '', syncing = false, syncAgain = false, syncTimer = null;
-let dirHandle = null, dirOk = false, fileTimer = null;
 
 const persist = () => { try { localStorage.setItem(SKEY, JSON.stringify(ST)); } catch (e) {} };
 const syncPass = () => { try { return JSON.parse(localStorage.getItem('appsync-pass')) || ''; } catch (e) { return ''; } };
@@ -728,7 +726,6 @@ async function sync(manual) {
   if (dlgOpen()) { queueSync(3000); return; }
   syncing = true; let changed = false;
   try {
-    await fileSync();
     const r = await post({ key: syncPass(), app: 'tasks', read: true });
     if (!r || !r.ok) {
       if (r && r.error === 'password') { syncErr = 'Wrong password'; return; }
@@ -753,7 +750,7 @@ async function sync(manual) {
     persist();
     if (failed) syncErr = 'Some changes not sent yet, will retry';
     lastSync = Date.now();
-    if (changed) { applyAll(); if (!dlgOpen()) { const y = window.scrollY; render(); window.scrollTo(0, y); } await writeFiles(); }
+    if (changed) { applyAll(); renderLinkBar(); if (!dlgOpen()) { const y = window.scrollY; render(); window.scrollTo(0, y); } }
     if (manual) toast(changed ? 'Updated from your other device' : 'Everything is in sync');
   } catch (e) { syncErr = 'Offline, will sync later'; }
   finally {
@@ -762,7 +759,7 @@ async function sync(manual) {
   }
 }
 function showSync() {
-  const linked = dirOk ? ' · TASKS.md linked' : '';
+  const linked = '';
   if (!syncPass()) return setStatus('err', 'Not connected — type your password');
   if (syncErr) return setStatus('err', syncErr + linked);
   if (!lastSync) return setStatus('', 'Syncing…' + linked);
@@ -775,74 +772,25 @@ function toast(msg) {
   t.textContent = msg; t.className = 'show'; clearTimeout(t._h); t._h = setTimeout(() => t.className = '', 2200);
 }
 
-/* ---- computer only: mirror the .md files in the Dropbox Tasks folder ---- */
-const DB = 'igor-tasks-db';
-function idb(mode, fn) {
-  return new Promise((res, rej) => {
-    let r; try { r = indexedDB.open(DB, 1); } catch (e) { return rej(e); }
-    r.onupgradeneeded = () => r.result.createObjectStore('kv');
-    r.onerror = () => rej(r.error);
-    r.onsuccess = () => {
-      try {
-        const tx = r.result.transaction('kv', mode), st = tx.objectStore('kv');
-        const q = fn(st); tx.oncomplete = () => res(q && q.result); tx.onerror = () => rej(tx.error);
-      } catch (e) { rej(e); }
-    };
-  });
-}
-const saveHandle = h => idb('readwrite', st => st.put(h, 'dir')).catch(() => {});
-const loadHandle = () => idb('readonly', st => st.get('dir')).catch(() => null);
-async function fileHandleFor(k, create) {
-  const name = k + '.md';
-  try { return await dirHandle.getFileHandle(name); } catch (e) {}
-  try { const sub = await dirHandle.getDirectoryHandle('Tasks'); return await sub.getFileHandle(name); } catch (e) {}
-  if (create) try { return await dirHandle.getFileHandle(name, { create: true }); } catch (e) {}
-  return null;
-}
-let fileBusy = false;
-async function fileSync() {
-  if (!dirOk || fileBusy) return false;
-  fileBusy = true; let changed = false;
-  try {
-    for (const k of FILES) {
-      const h = await fileHandleFor(k, !!ST.text[k]); if (!h) continue;
-      const F = norm(await (await h.getFile()).text()), FB = ST.fbase[k], cur = norm(ST.text[k]);
-      let m = cur;
-      if (FB === undefined) m = cur ? merge3('', cur, F) : F;       // first link on this computer
-      else if (F !== norm(FB)) m = merge3(FB, F, cur);               // someone (e.g. Claude) edited the file
-      if (m !== cur) { ST.text[k] = m; changed = true; }
-      if (F !== m) { const w = await h.createWritable(); await w.write(m); await w.close(); }
-      ST.fbase[k] = m;
-    }
-    persist();
-  } catch (e) { dirOk = false; showSync(); renderLinkBar(); }
-  finally { fileBusy = false; }
-  if (changed) { applyAll(); if (!dlgOpen()) render(); queueSync(); }
-  return changed;
-}
-const writeFiles = () => fileSync();
-async function linkFolder(mode) {
-  try {
-    if (!dirHandle || mode === 'pick') { dirHandle = await window.showDirectoryPicker({ id: 'igor-tasks', mode: 'readwrite' }); await saveHandle(dirHandle); }
-    let p = await dirHandle.queryPermission({ mode: 'readwrite' });
-    if (p !== 'granted') p = await dirHandle.requestPermission({ mode: 'readwrite' });
-    dirOk = p === 'granted';
-    if (dirOk) { if (mode === 'pick') ST.fbase = {}; await fileSync(); startFilePoll(); queueSync(200); }
-  } catch (e) { if (e.name !== 'AbortError') { console.error(e); toast('Could not open the folder'); } }
-  renderLinkBar(); showSync();
-}
-function startFilePoll() { clearInterval(fileTimer); fileTimer = setInterval(() => { if (document.visibilityState === 'visible') fileSync(); }, 3000); }
+/* ---- one-time import of TASKS.md / PROJECTS.md / GOALS.md (when the app is empty) ---- */
+async function fileSync() { return false; }
+const writeFiles = () => {};
 function renderLinkBar() {
   const el = document.getElementById('linkbar'); if (!el) return;
-  if (!window.showDirectoryPicker) { el.innerHTML = ''; return; }
-  el.innerHTML = dirOk
-    ? `<span>📁 TASKS.md in your Tasks folder is kept up to date</span> <button class="btn" id="unlinkBtn">Unlink</button>`
-    : `<span>📁 ${dirHandle ? 'Give access to your Tasks folder again' : 'Link your Dropbox <b>Tasks</b> folder so TASKS.md stays up to date (computer only)'}</span> <button class="btn primary" id="linkBtn">${dirHandle ? 'Reconnect' : 'Choose folder'}</button>`;
-  const lb = document.getElementById('linkBtn'); if (lb) lb.onclick = () => linkFolder(dirHandle ? 'grant' : 'pick');
-  const ub = document.getElementById('unlinkBtn'); if (ub) ub.onclick = async () => { dirOk = false; dirHandle = null; clearInterval(fileTimer); await idb('readwrite', st => st.delete('dir')).catch(() => {}); ST.fbase = {}; persist(); renderLinkBar(); showSync(); };
+  if (ST.text.TASKS) { el.innerHTML = ''; return; }
+  el.innerHTML = `<span>No tasks yet. Import your <b>TASKS.md</b>, <b>PROJECTS.md</b> and <b>GOALS.md</b> once (select all three).</span>
+    <label class="btn primary">Import files<input type="file" id="impMd" accept=".md,text/markdown,text/plain" multiple hidden></label>`;
+  document.getElementById('impMd').onchange = async e => {
+    let n = 0;
+    for (const f of e.target.files) {
+      const k = f.name.toUpperCase().replace(/\.(MD|TXT)$/, '');
+      if (FILES.includes(k)) { ST.text[k] = norm(await f.text()); n++; }
+    }
+    if (!n) { toast('Choose TASKS.md, PROJECTS.md and GOALS.md'); return; }
+    persist(); applyAll(); render(); renderLinkBar(); toast(`Imported ${n} file${n > 1 ? 's' : ''}`); queueSync(200);
+  };
 }
 
-/* ---------- GOALS.md (same folder as TASKS.md) ---------- */
 const RDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function parseGoals(text) {
@@ -922,7 +870,7 @@ function renderGoals() {
       ${s.extra.length ? `<ul class="rextra">${s.extra.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}</section>`;
   }).join('');
   return `${goals.vision.length ? `<div class="vision">${goals.vision.map(esc).join('<br>')}</div>` : ''}<div class="goals">${cards}</div>
-    <p class="hint">Click a circle to mark a goal reached. Goals sync to all your devices (and GOALS.md on the computer).</p>`;
+    <p class="hint">Click a circle to mark a goal reached. Goals sync to all your devices.</p>`;
 }
 
 function save() {
@@ -1345,14 +1293,6 @@ $('form').addEventListener('submit', e => {
 (async function init() {
   try { const v = localStorage.getItem('igor-view'); if (['today', 'board', 'week', 'projects', 'gantt', 'goals'].includes(v)) view = v; } catch (e) {}
   applyAll(); render(); showSync(); renderLinkBar();
-  if (window.showDirectoryPicker) {
-    dirHandle = await loadHandle();
-    if (dirHandle) {
-      const p = await dirHandle.queryPermission({ mode: 'readwrite' }).catch(() => 'denied');
-      dirOk = p === 'granted'; if (dirOk) startFilePoll();
-      renderLinkBar();
-    }
-  }
   sync();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { render(); sync(); } });
   window.addEventListener('online', () => sync());
