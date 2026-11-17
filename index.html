@@ -484,6 +484,8 @@ body:has(#selbar.show) main { padding-bottom: 40vh; }
 .parch { margin-top: 18px; border: 1px dashed var(--line); border-radius: 14px; padding: 10px 14px; background: var(--panel-2); }
 .parch > summary { cursor: pointer; font-weight: 650; color: var(--muted); }
 .parch .hint { margin: 8px 0; }
+.partasks { margin: 0 0 8px 0; }
+.partasks > summary { cursor: pointer; color: var(--muted); font-size: calc(13px * var(--fs)); padding: 2px 0 6px; }
 .parow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
 .parow .pan { flex: 1; min-width: 0; }
 </style>
@@ -812,6 +814,9 @@ function serialize() {
 /* ---------- model helpers ---------- */
 const allTasks = () => doc.sections.flatMap(s => s.items.filter(i => i.rawLine === undefined).map(t => ({ t, s })));
 const findTask = id => allTasks().find(x => x.t.id === id);
+/* tasks of archived projects are archived too: hidden from all lists, counts and tags */
+const archivedProjects = () => new Set(projList.filter(p => p.kind === 'archived').map(p => p.name));
+const liveTasks = () => { const ar = archivedProjects(); return ar.size ? allTasks().filter(x => !ar.has(x.t.proj)) : allTasks(); };
 const sectionByName = n => doc.sections.find(s => s.name.toLowerCase() === n.toLowerCase());
 const doneSection = () => sectionByName('Done');
 const activeSection = () => sectionByName('Active') || doc.sections[0];
@@ -1169,7 +1174,7 @@ function taskHTML(t, opts = {}) {
 }
 
 function renderFilters() {
-  const tasks = allTasks().filter(x => !x.t.done).map(x => x.t);
+  const tasks = liveTasks().filter(x => !x.t.done).map(x => x.t);
   const count = k => tasks.filter(t => t.proj === k.slice(2)).length;
   const chip = (k, label, color, title) =>
     `<button class="fchip ${filters.has(k) ? 'on' : ''}" data-f="${esc(k)}" style="--c:${color}" title="${esc(title || '')}">${esc(label)}<span class="n">${count(k)}</span></button>`;
@@ -1181,13 +1186,13 @@ function renderFilters() {
 
 function renderToday() {
   const t0 = todayYmd();
-  const open = allTasks().filter(x => !x.t.done && passesFilter(x.t));
+  const open = liveTasks().filter(x => !x.t.done && passesFilter(x.t));
   const overdue = open.filter(x => x.t.date && x.t.date < t0);
   const today = open.filter(x => x.t.date === t0 && !isWaiting(x.s));
   const anytime = open.filter(x => !x.t.date && x.s === activeSection() && !x.t.proj);
   const projOpen = open.filter(x => !x.t.date && x.s === activeSection() && x.t.proj).length;
   const waiting = open.filter(x => isWaiting(x.s) && (!x.t.date || x.t.date <= t0));
-  const doneToday = allTasks().filter(x => x.t.done && x.t.doneDate === t0 && passesFilter(x.t));
+  const doneToday = liveTasks().filter(x => x.t.done && x.t.doneDate === t0 && passesFilter(x.t));
   const sum = a => a.reduce((n, x) => n + (x.t.dur || 0), 0);
   const planned = sum(today) + sum(overdue);
   const noDur = [...today, ...overdue].filter(x => !x.t.dur).length;
@@ -1213,7 +1218,7 @@ let curProj = (() => { try { return localStorage.getItem('igor-proj') || ''; } c
 const isInbox = t => !t.done && !t.date && !t.proj && !taskAllTags(t).length;
 function listScope(v) {
   const t0 = todayYmd(), t1 = addDays(t0, 1), t6 = addDays(t0, 6);
-  const open = allTasks().filter(x => !x.t.done);
+  const open = (v === 'proj' ? allTasks() : liveTasks()).filter(x => !x.t.done);
   const f = v === 'inbox' ? open : open.filter(x => passesFilter(x.t));
   if (v === 'inbox') return f.filter(x => isInbox(x.t));
   if (v === 'today') return f.filter(x => x.t.date && x.t.date <= t0);
@@ -1249,7 +1254,7 @@ function renderList() {
   let html = `<div class="lhead"><h1>${esc(title)}</h1>${tf}${view === 'proj' ? `<button class="btn icon" data-editproj="${esc(curProj)}" title="Edit project">✎</button>` : ''}</div>
     <input class="addtask" data-add placeholder="+ Add task to “${esc(place)}”   e.g. Call Amanda #EMP ~15m tomorrow  (Enter)">`;
   if (view === 'today') {
-    const doneToday = allTasks().filter(x => x.t.done && x.t.doneDate === t0 && passesFilter(x.t));
+    const doneToday = liveTasks().filter(x => x.t.done && x.t.doneDate === t0 && passesFilter(x.t));
     const r = todayRhythm();
     html += `<div class="stline"><b>${items.length}</b> to do · <b>${durNice(sum(items))}</b> planned · <b>${doneToday.length}</b> done today${r ? ` · training: <b>${esc(r)}</b>` : ''}</div>`;
   }
@@ -1269,7 +1274,7 @@ function renderList() {
   }
   if (!items.length) html += `<div class="empty" style="max-width:980px">${view === 'inbox' ? 'Inbox is empty — everything is sorted. 🎉' : 'Nothing here.'}</div>`;
   if (view === 'inbox') html += `<p class="hint" style="max-width:980px">Inbox holds tasks with no date, no tag and no project. Give a task any of these and it moves out of the Inbox.</p>`;
-  const done = view === 'today' ? allTasks().filter(x => x.t.done && x.t.doneDate === t0 && passesFilter(x.t))
+  const done = view === 'today' ? liveTasks().filter(x => x.t.done && x.t.doneDate === t0 && passesFilter(x.t))
     : view === 'proj' ? allTasks().filter(x => x.t.done && x.t.proj === curProj) : [];
   if (done.length) html += `<details class="lgroup" data-g="done"><summary>Completed<span class="t">${done.length}</span></summary>${done.map(x => rowHTML(x.t, x.s, { compact: true })).join('')}</details>`;
   return html;
@@ -1277,9 +1282,9 @@ function renderList() {
 function renderNav() {
   const t0 = todayYmd();
   const n = v => listScope(v).length;
-  const over = allTasks().filter(x => !x.t.done && x.t.date && x.t.date < t0 && passesFilter(x.t)).length;
+  const over = liveTasks().filter(x => !x.t.done && x.t.date && x.t.date < t0 && passesFilter(x.t)).length;
   const item = (v, ic, label, cnt, extra = '') => `<button class="nitem ${view === v ? 'on' : ''}" data-goview="${v}"><span class="ic">${ic}</span><span class="nm">${label}</span>${cnt != null ? `<span class="n ${extra}">${cnt}</span>` : ''}</button>`;
-  const projs = projects().map(p => { const c = allTasks().filter(x => !x.t.done && x.t.proj === p && passesFilter(x.t)).length;
+  const projs = projects().map(p => { const c = liveTasks().filter(x => !x.t.done && x.t.proj === p && passesFilter(x.t)).length;
     return `<button class="nitem ${view === 'proj' && curProj === p ? 'on' : ''}" data-goproj="${esc(p)}"><span class="ic" style="color:var(--proj)">▣</span><span class="nm">${esc(p)}</span><span class="n">${c || ''}</span></button>`; }).join('');
   return item('all', '☰', 'All', n('all')) + item('today', '◉', 'Today', n('today'), over ? 'bad' : '') + item('tomorrow', '☀', 'Tomorrow', n('tomorrow'))
     + item('next7', '7', 'Next 7 Days', n('next7')) + item('inbox', '⇣', 'Inbox', n('inbox'))
@@ -1304,7 +1309,7 @@ function renderWeek() {
   const base = new Date(); base.setHours(0, 0, 0, 0);
   const monday = new Date(base); monday.setDate(base.getDate() - ((base.getDay() + 6) % 7) + weekOffset * 7);
   const days = [...Array(7)].map((_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return toYmd(d); });
-  const tasks = allTasks().filter(x => passesFilter(x.t));
+  const tasks = liveTasks().filter(x => passesFilter(x.t));
   const t0 = todayYmd();
   const end = fromYmd(days[6]);
   const lbl = `${monday.getDate()}. ${MONTHS[monday.getMonth()]} – ${end.getDate()}. ${MONTHS[end.getMonth()]} ${end.getFullYear()}`;
@@ -1363,7 +1368,7 @@ function tagTree(names) {
   tagList.forEach((x, i) => ensure(x.path, i, x.created));
   const addPath = (t, fn) => { let node = root; for (const part of t.split('/')) { if (!node.kids.has(part)) ensure(t, Infinity); node = node.kids.get(part); fn(node); } };
   for (const n of names) for (const t of projTags(n)) addPath(t, node => node.projs.add(n));
-  for (const { t } of allTasks()) for (const tg of taskAllTags(t)) addPath(tg, node => { if (!t.done) node.taskIds.add(t.id); });
+  for (const { t } of liveTasks()) for (const tg of taskAllTags(t)) addPath(tg, node => { if (!t.done) node.taskIds.add(t.id); });
   const count = node => { node.tasks = node.taskIds.size; node.kids.forEach(count); };
   root.kids.forEach(count);
   return root;
@@ -1384,7 +1389,7 @@ function flatTags() {
 }
 function renderTagSide(names, inNav) {
   const tree = tagTree(names), pv = view === 'projects';
-  const openTasks = allTasks().filter(x => !x.t.done);
+  const openTasks = liveTasks().filter(x => !x.t.done);
   const untagged = pv ? names.filter(n => !projTags(n).length).length : openTasks.filter(x => !taskAllTags(x.t).length).length;
   const allN = pv ? names.length : openTasks.length;
   const row = (node, depth) => {
@@ -1416,7 +1421,7 @@ function renderProjects() {
   const names = projects();
   const list = names.filter(p => !filters.size || [...filters].every(f => !f.startsWith('P:')) || filters.has('P:' + p))
     .filter(p => !projTag || (projTag === '__none' ? !projTags(p).length
-      : tagMatch(projTags(p), projTag) || allTasks().some(x => x.t.proj === p && tagMatch(x.t.tags, projTag))));
+      : tagMatch(projTags(p), projTag) || liveTasks().some(x => x.t.proj === p && tagMatch(x.t.tags, projTag))));
   const anyOpen = names.some(p => projOpenSet.has(p));
   const top = `<div class="pbarTop"><button class="btn primary" data-newproj>+ New project</button><button class="btn" data-pall="${anyOpen ? 'hide' : 'show'}">${anyOpen ? '▴ Hide all tasks' : '▾ Show all tasks'}</button></div>`;
   if (!list.length) return `${top}${archiveHTML()}<div class="empty">${names.length ? 'No projects with this tag.' : 'No projects yet. Tap <b>+ New project</b>, or open a task and fill in <b>Project</b>.'}</div>`;
@@ -1445,10 +1450,12 @@ function archiveHTML() {
   const arch = projList.filter(p => p.kind === 'archived');
   if (!arch.length) return '';
   return `<details class="parch" ${archOpen ? 'open' : ''}><summary>🗄 Archive (${arch.length})</summary>
-    <div class="hint">Archived projects are hidden everywhere else. Tap ✎ and change <b>Type</b> to bring one back.</div>
+    <div class="hint">Archived projects and their tasks are hidden everywhere else. Tap ✎ and change <b>Type</b> to bring one back.</div>
     ${arch.map(p => {
       const all = allTasks().filter(x => x.t.proj === p.name), nDone = all.filter(x => x.t.done).length;
-      return `<div class="parow"><div class="pan"><b>${esc(p.name)}</b>${p.desc ? `<span class="ctx"> — ${esc(p.desc)}</span>` : ''}<div class="pmeta">${nDone} of ${all.length} tasks done</div></div><button class="btn icon" data-editproj="${esc(p.name)}" title="Edit, restore or delete">✎</button></div>`;
+      const openT = all.filter(x => !x.t.done), doneT = all.filter(x => x.t.done);
+      return `<div class="parow"><div class="pan"><b>${esc(p.name)}</b>${p.desc ? `<span class="ctx"> — ${esc(p.desc)}</span>` : ''}<div class="pmeta">${nDone} of ${all.length} tasks done</div></div><button class="btn icon" data-editproj="${esc(p.name)}" title="Edit, restore or delete">✎</button></div>
+        ${all.length ? `<details class="partasks"><summary>Tasks (${all.length})</summary>${[...openT, ...doneT].map(x => taskHTML(x.t, { hideProject: true, compact: true })).join('')}</details>` : ''}`;
     }).join('')}</details>`;
 }
 let archOpen = false;
