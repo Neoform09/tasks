@@ -461,6 +461,13 @@ body:has(#selbar.show) main { padding-bottom: 40vh; }
 .phead .pcar { display: inline-block; width: 1em; opacity: .6; }
 .phead .pcnt { font-size: .6em; font-weight: 600; color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; vertical-align: middle; }
 .pcard.closed .pmeta { margin-bottom: 0; }
+
+/* archive */
+.parch { margin-top: 18px; border: 1px dashed var(--line); border-radius: 14px; padding: 10px 14px; background: var(--panel-2); }
+.parch > summary { cursor: pointer; font-weight: 650; color: var(--muted); }
+.parch .hint { margin: 8px 0; }
+.parow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.parow .pan { flex: 1; min-width: 0; }
 </style>
 </head>
 <body>
@@ -1349,7 +1356,7 @@ function renderProjects() {
       : tagMatch(projTags(p), projTag) || allTasks().some(x => x.t.proj === p && tagMatch(x.t.tags, projTag))));
   const anyOpen = names.some(p => projOpenSet.has(p));
   const top = `<div class="pbarTop"><button class="btn primary" data-newproj>+ New project</button><button class="btn" data-pall="${anyOpen ? 'hide' : 'show'}">${anyOpen ? '▴ Hide all tasks' : '▾ Show all tasks'}</button></div>`;
-  if (!list.length) return `${top}<div class="empty">${names.length ? 'No projects with this tag.' : 'No projects yet. Tap <b>+ New project</b>, or open a task and fill in <b>Project</b>.'}</div>`;
+  if (!list.length) return `${top}${archiveHTML()}<div class="empty">${names.length ? 'No projects with this tag.' : 'No projects yet. Tap <b>+ New project</b>, or open a task and fill in <b>Project</b>.'}</div>`;
   return `${top}<div class="projects">${list.map(p => {
     const all = allTasks().filter(x => x.t.proj === p);
     const shown = all.filter(x => passesFilter(x.t));
@@ -1369,8 +1376,19 @@ function renderProjects() {
       ${!isOpen ? '' : (open.map(x => taskHTML(x.t, { hideProject: true })).join('') || `<div class="empty">${all.length ? 'All done 🎉' : 'No tasks yet.'}</div>`)}
       ${isOpen && done.length ? `<details class="pdone"><summary>${done.length} done</summary>${done.map(x => taskHTML(x.t, { hideProject: true, compact: true })).join('')}</details>` : ''}
     </section>`;
-  }).join('')}</div>`;
+  }).join('')}</div>${archiveHTML()}`;
 }
+function archiveHTML() {
+  const arch = projList.filter(p => p.kind === 'archived');
+  if (!arch.length) return '';
+  return `<details class="parch" ${archOpen ? 'open' : ''}><summary>🗄 Archive (${arch.length})</summary>
+    <div class="hint">Archived projects are hidden everywhere else. Tap ✎ and change <b>Type</b> to bring one back.</div>
+    ${arch.map(p => {
+      const all = allTasks().filter(x => x.t.proj === p.name), nDone = all.filter(x => x.t.done).length;
+      return `<div class="parow"><div class="pan"><b>${esc(p.name)}</b>${p.desc ? `<span class="ctx"> — ${esc(p.desc)}</span>` : ''}<div class="pmeta">${nDone} of ${all.length} tasks done</div></div><button class="btn icon" data-editproj="${esc(p.name)}" title="Edit, restore or delete">✎</button></div>`;
+    }).join('')}</details>`;
+}
+let archOpen = false;
 
 /* ---------- gantt ---------- */
 const DW = 22;                 // px per day
@@ -1537,6 +1555,8 @@ mainEl.addEventListener('click', e => {
   const ap = e.target.closest('[data-addproj]');
   if (ap) { presetProj = ap.dataset.addproj; openEditor(null); return; }
   if (e.target.closest('[data-newproj]')) { openProjEditor(null); return; }
+  const asm = e.target.closest('.parch > summary');
+  if (asm) { archOpen = !asm.parentElement.open; return; }
   const sm = e.target.closest('.ptags > summary');
   if (sm) { tagsOpenPhone = !sm.parentElement.open; return; }
   if (e.target.closest('[data-tmode]')) { e.preventDefault(); tagEdit = !tagEdit; render(); return; }
