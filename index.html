@@ -229,6 +229,14 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .ptag .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ptag .n { opacity: .65; font-size: .85em; }
 .ptag .tw { width: 1.1em; flex: none; text-align: center; opacity: .6; border-radius: 4px; }
+.ptag .dh { width: 1em; flex: none; text-align: center; opacity: .3; cursor: grab; touch-action: none; user-select: none; letter-spacing: -2px; }
+.ptag .dh:hover { opacity: .8; }
+.ptag.on .dh { opacity: .6; }
+.ptag.dragging { opacity: .35; }
+.tdropline { position: absolute; right: 8px; height: 3px; border-radius: 2px; background: var(--accent); pointer-events: none; z-index: 5; }
+.tdropline::before { content: ''; position: absolute; left: -4px; top: -3px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--accent); background: var(--panel-2); box-sizing: border-box; }
+.tsortrow { display: flex; align-items: center; gap: 6px; padding: 0 8px 6px; color: var(--muted); font-size: .85em; }
+.tsortrow select { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 2px 4px; }
 .ptag .tw:hover { opacity: 1; background: var(--line); }
 .ptags hr { border: 0; border-top: 1px solid var(--line); margin: 6px 4px; }
 .ptchips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
@@ -352,7 +360,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   .cols.week { grid-template-columns: 1fr; }
   .projects, .goals { grid-template-columns: 1fr; }
   .pwrap { grid-template-columns: 1fr; gap: 12px; }
-  .ptags { position: static; }
+  .ptags { position: relative; }
   .ptags summary { display: block; cursor: pointer; padding: 4px 8px; font-weight: 600; color: var(--muted); }
   .ptags h3 { display: none; }
   .pthead { justify-content: flex-end; }
@@ -718,7 +726,7 @@ let lastSync = 0, syncErr = '', syncing = false, syncAgain = false, syncTimer = 
 
 const persist = () => { try { localStorage.setItem(SKEY, JSON.stringify(ST)); } catch (e) {} };
 const syncPass = () => { try { return JSON.parse(localStorage.getItem('appsync-pass')) || ''; } catch (e) { return ''; } };
-const dlgOpen = () => ['dlg', 'pdlg', 'tdlg'].some(id => document.getElementById(id).open);
+const dlgOpen = () => ['dlg', 'pdlg', 'tdlg'].some(id => document.getElementById(id).open) || !!window.__tagDragging;
 
 function applyAll() {
   doc = parseDoc(ST.text.TASKS || '# Tasks');
@@ -1083,39 +1091,61 @@ let tagsOpenPhone = false, tagEdit = false;
 let projTag = (() => { try { return localStorage.getItem('igor-ptag') || ''; } catch (e) { return ''; } })();
 const tagClosed = new Set((() => { try { return JSON.parse(localStorage.getItem('igor-ptag-closed')) || []; } catch (e) { return []; } })());
 const saveTagUi = () => { try { localStorage.setItem('igor-ptag', projTag); localStorage.setItem('igor-ptag-closed', JSON.stringify([...tagClosed])); } catch (e) {} };
+let tagSort = (() => { try { return localStorage.getItem('igor-tagsort') || 'custom'; } catch (e) { return 'custom'; } })();
+const TAG_SORTS = [['custom', 'My order'], ['alpha', 'A–Z'], ['tasks', 'Most tasks'], ['newest', 'Newest first'], ['oldest', 'Oldest first']];
 function tagTree(names) {
   const root = { kids: new Map() };
-  for (const t of tagList) {
+  const ensure = (t, i, created) => {
     let node = root, path = '';
     for (const part of t.split('/')) {
       path = path ? path + '/' + part : part;
-      if (!node.kids.has(part)) node.kids.set(part, { name: part, path, kids: new Map(), projs: new Set() });
+      if (!node.kids.has(part)) node.kids.set(part, { name: part, path, kids: new Map(), projs: new Set(), ord: Infinity, created: '' });
       node = node.kids.get(part);
+      node.ord = Math.min(node.ord, i);
     }
-  }
+    if (created) node.created = created;
+    return node;
+  };
+  tagList.forEach((x, i) => ensure(x.path, i, x.created));
+  const openN = {}; for (const { t } of allTasks()) if (t.proj && !t.done) openN[t.proj] = (openN[t.proj] || 0) + 1;
   for (const n of names) for (const t of projTags(n)) {
-    let node = root, path = '';
-    for (const part of t.split('/')) {
-      path = path ? path + '/' + part : part;
-      if (!node.kids.has(part)) node.kids.set(part, { name: part, path, kids: new Map(), projs: new Set() });
-      node = node.kids.get(part); node.projs.add(n);
-    }
+    let node = root;
+    for (const part of t.split('/')) { if (!node.kids.has(part)) ensure(t, Infinity); node = node.kids.get(part); node.projs.add(n); }
   }
+  const count = node => { node.tasks = [...node.projs].reduce((s, n) => s + (openN[n] || 0), 0); node.kids.forEach(count); };
+  root.kids.forEach(count);
   return root;
+}
+function sortKids(node) {
+  const a = [...node.kids.values()], az = (x, y) => x.name.localeCompare(y.name, undefined, { numeric: true, sensitivity: 'base' });
+  const byOrd = (x, y) => (x.ord - y.ord) || az(x, y);
+  if (tagSort === 'alpha') return a.sort(az);
+  if (tagSort === 'tasks') return a.sort((x, y) => (y.tasks - x.tasks) || (y.projs.size - x.projs.size) || byOrd(x, y));
+  if (tagSort === 'newest') return a.sort((x, y) => (y.created || '').localeCompare(x.created || '') || byOrd(x, y));
+  if (tagSort === 'oldest') return a.sort((x, y) => (x.created || '').localeCompare(y.created || '') || byOrd(x, y));
+  return a.sort(byOrd);
+}
+// every tag in the order shown now (sub-tags right after their parent), collapsed ones included
+function flatTags() {
+  const out = [], walk = (n, d) => sortKids(n).forEach(k => { out.push({ path: k.path, depth: d }); walk(k, d + 1); });
+  walk(tagTree(projects()), 0); return out;
 }
 function renderTagSide(names) {
   const tree = tagTree(names), untagged = names.filter(n => !projTags(n).length).length;
   const row = (node, depth) => {
-    const kids = [...node.kids.values()].sort((a, b) => a.name.localeCompare(b.name));
+    const kids = sortKids(node);
     const open = !tagClosed.has(node.path);
     const tw = kids.length ? `<span class="tw" data-ptoggle="${esc(node.path)}">${open ? '▾' : '▸'}</span>` : `<span class="tw"></span>`;
-    return `<button class="ptag ${projTag === node.path && !tagEdit ? 'on' : ''}" ${tagEdit ? `data-tedit="${esc(node.path)}"` : `data-ptag="${esc(node.path)}"`} style="padding-left:${8 + depth * 16}px" title="${esc(node.path)}">${tw}<span class="nm">${esc(node.name)}</span>${tagEdit ? '<span class="n">✎</span>' : `<span class="n">${node.projs.size}</span>`}</button>`
+    const cnt = tagSort === 'tasks' ? `<span class="n" title="open tasks">${node.tasks}</span>` : `<span class="n" title="projects">${node.projs.size}</span>`;
+    const tip = node.path + (node.created ? ` · added ${node.created}` : '');
+    return `<button class="ptag ${projTag === node.path && !tagEdit ? 'on' : ''}" data-row="${esc(node.path)}" data-depth="${depth}" ${tagEdit ? `data-tedit="${esc(node.path)}"` : `data-ptag="${esc(node.path)}"`} style="padding-left:${4 + depth * 16}px" title="${esc(tip)}"><span class="dh" data-drag="${esc(node.path)}" title="Drag: up/down to reorder, right/left to nest">⋮⋮</span>${tw}<span class="nm">${esc(node.name)}</span>${tagEdit ? '<span class="n">✎</span>' : cnt}</button>`
       + (open ? kids.map(k => row(k, depth + 1)).join('') : '');
   };
-  const top = [...tree.kids.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const top = sortKids(tree);
   const wide = !window.matchMedia || !window.matchMedia('(max-width: 640px)').matches;
   return `<details class="ptags" ${wide || tagsOpenPhone ? 'open' : ''}><summary>Tags${projTag ? ': ' + esc(projTag === '__none' ? 'No tag' : projTag) : ''}</summary>
     <div class="pthead"><h3>Tags</h3><span class="spacer"></span><button class="tbtn" data-tnew>+ Tag</button><button class="tbtn ${tagEdit ? 'on' : ''}" data-tmode>${tagEdit ? 'Done' : 'Edit'}</button></div>
+    ${top.length ? `<div class="tsortrow"><span>Sort</span><select data-tsort>${TAG_SORTS.map(([k, l]) => `<option value="${k}" ${tagSort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
     ${tagEdit ? '<div class="hint" style="padding:2px 8px 6px">Tap a tag to rename, move or delete it.</div>' : ''}
     <button class="ptag ${!projTag ? 'on' : ''}" data-ptag=""><span class="tw"></span><span class="nm">All projects</span><span class="n">${names.length}</span></button>
     <hr>${top.map(n => row(n, 0)).join('') || '<div class="empty" style="padding:4px 8px">No tags yet — tap <b>+ Tag</b>, or add them with ✎ on a project.</div>'}
@@ -1142,7 +1172,7 @@ function renderProjects() {
     const due = m.deadline ? ` · <span class="${over ? 'bad' : ''}">📅 ${esc(shortDate(m.deadline))} · ${daysLeftTxt(m.deadline)}</span>` : m.kind === 'area' ? ' · ongoing area' : '';
     return `<section class="pcard">
       <div class="phead"><h2>${esc(p)}</h2><button class="btn" data-addproj="${esc(p)}">+ Add task</button><button class="btn icon" data-editproj="${esc(p)}" title="Edit or delete project">✎</button></div>
-      ${(m.tags || []).length ? `<div class="ptchips">${m.tags.map(t => { const i = t.lastIndexOf('/'); return `<span class="ptchip ${projTag === t ? 'on' : ''}" data-ptag="${esc(t)}" title="Show projects tagged ${esc(t)}">${i > 0 ? `<span class="par">${esc(t.slice(0, i))} › </span>` : ''}${esc(t.slice(i + 1))}</span>`; }).join('')}</div>` : ''}
+      ${(m.tags || []).length ? `<div class="ptchips">${m.tags.map(t => { const i = t.lastIndexOf('/'); return `<span class="ptchip ${projTag === t ? 'on' : ''}" data-ptag="${esc(t)}" title="Show projects tagged ${esc(t)}">${i > 0 ? `<span class="par">${esc(t.slice(0, i).split('/').join(' › '))} › </span>` : ''}${esc(t.slice(i + 1))}</span>`; }).join('')}</div>` : ''}
       ${m.desc ? `<div class="ctx" style="margin-top:4px">${esc(m.desc)}</div>` : ''}
       <div class="pbar"><span style="width:${pct}%"></span></div>
       <div class="pmeta">${nDone} of ${all.length} done · ${pct}%${left ? ' · ' + durNice(left) + ' left' : ''}${due}</div>
@@ -1295,6 +1325,7 @@ document.getElementById('filters').addEventListener('click', e => {
 
 const mainEl = document.getElementById('main');
 mainEl.addEventListener('click', e => {
+  if (Date.now() - lastTagDrag < 400 || e.target.closest('[data-drag]')) { e.preventDefault(); return; }
   const w = e.target.closest('[data-week]');
   if (w) { weekOffset = w.dataset.week === '0' ? 0 : weekOffset + Number(w.dataset.week); render(); return; }
   const ap = e.target.closest('[data-addproj]');
@@ -1445,17 +1476,21 @@ function projLine(p) {
 }
 function kindOfHead(h) { return /^tags?$/i.test(h.trim()) ? 'tagsec' : /area/i.test(h) ? 'area' : /archiv|done/i.test(h) ? 'archived' : 'project'; }
 // tags that exist on their own (also before any project uses them): "## Tags" section of PROJECTS.md
+// each line: "- Parent/Child (added 2026-11-17 16:20)"; the line order is your custom order
 function parseTagList(text) {
   const out = []; let on = false;
   for (const line of text.split(/\r?\n/)) {
     const h = line.match(/^##\s+(.+?)\s*$/);
     if (h) { on = /^tags?$/i.test(h[1].trim()); continue; }
     if (!on) continue;
-    const m = line.match(/^\s*-\s+(.+)$/); if (!m) continue;
-    const t = cleanTag(m[1].trim().replace(/\s+/g, '-')); if (t && !out.includes(t)) out.push(t);
+    const m = line.match(/^\s*-\s+(.+?)\s*(?:\(added\s+([^)]*)\))?\s*$/); if (!m) continue;
+    const t = cleanTag(m[1].trim().replace(/\s+/g, '-'));
+    if (t && !out.some(x => x.path === t)) out.push({ path: t, created: (m[2] || '').trim() });
   }
   return out;
 }
+const nowStamp = () => { const d = new Date(); return `${toYmd(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const tagPaths = () => tagList.map(x => x.path);
 // PROJECTS.md text with the "## Tags" section replaced by this list
 function withTagList(text, list) {
   const lines = norm(text || '# Projects\n').split('\n'), out = []; let skip = false;
@@ -1465,8 +1500,9 @@ function withTagList(text, list) {
     if (!skip) out.push(l);
   }
   while (out.length && !out[out.length - 1].trim()) out.pop();
-  const uniq = [...new Set(list)].sort((a, b) => a.localeCompare(b));
-  if (uniq.length) out.push('', '## Tags', ...uniq.map(t => '- ' + t));
+  const seen = new Set(), uniq = [];
+  for (const x of list) { const o = typeof x === 'string' ? { path: x, created: '' } : x; if (o.path && !seen.has(o.path)) { seen.add(o.path); uniq.push(o); } }
+  if (uniq.length) out.push('', '## Tags', ...uniq.map(o => '- ' + o.path + (o.created ? ` (added ${o.created})` : '')));
   return out.join('\n') + '\n';
 }
 // rewrite one project's line in place (keeps its position)
@@ -1475,12 +1511,12 @@ function replaceProjLine(text, name, p) {
 }
 const allTagPaths = () => {
   const set = new Set();
-  for (const t of [...tagList, ...projList.flatMap(p => p.tags || [])]) { const parts = t.split('/'); parts.forEach((_, i) => set.add(parts.slice(0, i + 1).join('/'))); }
+  for (const t of [...tagPaths(), ...projList.flatMap(p => p.tags || [])]) { const parts = t.split('/'); parts.forEach((_, i) => set.add(parts.slice(0, i + 1).join('/'))); }
   return [...set].sort((a, b) => a.localeCompare(b));
 };
 const underTag = (t, path) => t === path || t.startsWith(path + '/');
 // rename/move a tag (and its sub-tags) everywhere; to=null deletes it
-function retag(from, to) {
+function retag(from, to, newList) {
   let text = ST.text.PROJECTS || '# Projects\n', n = 0;
   const map = t => !underTag(t, from) ? t : to === null ? null : to + t.slice(from.length);
   for (const p of projList) {
@@ -1488,8 +1524,8 @@ function retag(from, to) {
     const tags = [...new Set(p.tags.map(map).filter(Boolean))];
     text = replaceProjLine(text, p.name, { ...p, tags }); n++;
   }
-  let list = tagList.map(map).filter(Boolean);
-  if (to !== null && !list.some(t => underTag(t, to))) list.push(to);
+  let list = newList || tagList.map(x => ({ ...x, path: map(x.path) })).filter(x => x.path);
+  if (!newList && to !== null && !list.some(x => underTag(x.path, to))) list.push({ path: to, created: nowStamp() });
   text = withTagList(text, list);
   if (projTag && underTag(projTag, from)) projTag = to === null ? '' : to + projTag.slice(from.length);
   [...tagClosed].forEach(k => { if (underTag(k, from)) { tagClosed.delete(k); if (to !== null) tagClosed.add(to + k.slice(from.length)); } });
@@ -1530,7 +1566,7 @@ function openProjEditor(name) {
   $('pdlg').showModal(); $('pName').focus();
 }
 $('pCancelBtn').onclick = () => $('pdlg').close();
-const allProjTags = () => [...new Set([...tagList, ...projList.flatMap(p => p.tags || [])])].sort((a, b) => a.localeCompare(b));
+const allProjTags = () => [...new Set([...tagPaths(), ...projList.flatMap(p => p.tags || [])])].sort((a, b) => a.localeCompare(b));
 const typedTags = () => [...new Set($('pTags').value.split(/[\s,]+/).map(cleanTag).filter(Boolean))];
 function renderTagPick() {
   const cur = typedTags();
@@ -1551,7 +1587,10 @@ $('pform').addEventListener('submit', e => {
   const p = { name, desc: $('pDesc').value.trim(), kind: $('pKind').value, start: $('pStart').value || null, deadline: $('pDeadline').value || null, tags: typedTags() };
   let tasksChanged = false;
   if (editingProj && editingProj !== name) allTasks().forEach(({ t }) => { if (t.proj === editingProj) { t.proj = name; t.raw = null; tasksChanged = true; } });
+  const known = new Set(allTagPaths()), fresh = [];
+  for (const t of p.tags) { const parts = t.split('/'); parts.forEach((_, i) => { const q = parts.slice(0, i + 1).join('/'); if (!known.has(q)) { known.add(q); fresh.push({ path: q, created: nowStamp() }); } }); }
   ST.text.PROJECTS = editProjectsText(editingProj, p);
+  if (fresh.length) ST.text.PROJECTS = withTagList(ST.text.PROJECTS, [...tagList, ...fresh]);
   if (tasksChanged) ST.text.TASKS = serialize();
   $('pdlg').close();
   setText('PROJECTS', ST.text.PROJECTS);
@@ -1601,7 +1640,7 @@ $('tform').addEventListener('submit', e => {
   const parent = $('tParent').value, path = parent ? parent + '/' + name : name;
   if (path !== editingTag && allTagPaths().includes(path)) { toast('That tag already exists'); return; }
   $('tdlg').close();
-  if (!editingTag) { setText('PROJECTS', withTagList(ST.text.PROJECTS, [...tagList, path])); toast('Tag added'); return; }
+  if (!editingTag) { setText('PROJECTS', withTagList(ST.text.PROJECTS, [...tagList, { path, created: nowStamp() }])); toast('Tag added'); return; }
   if (path === editingTag) return;
   const n = retag(editingTag, path);
   toast(n ? `Tag changed in ${n} project${n === 1 ? '' : 's'}` : 'Tag changed');
@@ -1614,6 +1653,72 @@ $('tDelBtn').onclick = () => {
   const n = retag(path, null);
   toast(n ? `Tag removed from ${n} project${n === 1 ? '' : 's'} (projects kept)` : 'Tag deleted');
 };
+
+/* ---------- sort + drag tags (up/down = order, right/left = nest/un-nest) ---------- */
+let lastTagDrag = 0, tdrag = null;
+mainEl.addEventListener('change', e => {
+  const sel = e.target.closest('[data-tsort]'); if (!sel) return;
+  tagSort = sel.value; try { localStorage.setItem('igor-tagsort', tagSort); } catch (er) {}
+  render();
+});
+mainEl.addEventListener('pointerdown', e => {
+  const h = e.target.closest('[data-drag]'); if (!h || e.button > 0) return;
+  e.preventDefault(); e.stopPropagation();
+  const side = h.closest('.ptags'), sr = side.getBoundingClientRect();
+  const rows = [...side.querySelectorAll('[data-row]')].map(el => ({ el, path: el.dataset.row, depth: Number(el.dataset.depth), r: el.getBoundingClientRect() }));
+  const src = rows.find(r => r.path === h.dataset.drag); if (!src) return;
+  const rest = rows.filter(r => !underTag(r.path, src.path));
+  rows.forEach(r => { if (underTag(r.path, src.path)) r.el.classList.add('dragging'); });
+  const line = document.createElement('div'); line.className = 'tdropline'; line.style.display = 'none'; side.appendChild(line);
+  tdrag = { src, rest, rows, line, side, sr, x0: e.clientX, y0: e.clientY, sy: window.scrollY, moved: false, target: null };
+  window.__tagDragging = true;
+  try { h.setPointerCapture(e.pointerId); } catch (er) {}
+});
+mainEl.addEventListener('pointermove', e => {
+  if (!tdrag) return;
+  const d = tdrag, dy = window.scrollY - d.sy;
+  if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 4) return;
+  d.moved = true; e.preventDefault();
+  const y = e.clientY + dy;                     // in the coordinates the rows were measured in
+  let i = 0; while (i < d.rest.length && d.rest[i].r.top + d.rest[i].r.height / 2 < y) i++;
+  const prev = d.rest[i - 1], next = d.rest[i];
+  const max = prev ? prev.depth + 1 : 0, min = next ? Math.min(next.depth, max) : 0;
+  const depth = Math.max(min, Math.min(max, d.src.depth + Math.round((e.clientX - d.x0) / 16)));
+  d.target = { prev: prev ? prev.path : null, prevDepth: prev ? prev.depth : -1, depth };
+  const lineY = prev ? prev.r.bottom : next ? next.r.top : d.src.r.top;
+  Object.assign(d.line.style, { display: '', top: (lineY - d.sr.top - 1) + 'px', left: (14 + depth * 16) + 'px' });
+});
+function endTagDrag(cancel) {
+  const d = tdrag; if (!d) return;
+  tdrag = null; window.__tagDragging = false; lastTagDrag = Date.now();
+  d.line.remove(); d.rows.forEach(r => r.el.classList.remove('dragging'));
+  if (!cancel && d.moved && d.target) moveTagTo(d.src.path, d.target);
+}
+mainEl.addEventListener('pointerup', () => endTagDrag(false));
+mainEl.addEventListener('pointercancel', () => endTagDrag(true));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && tdrag) endTagDrag(true); });
+
+function moveTagTo(path, { prev, prevDepth, depth }) {
+  const name = path.split('/').pop();
+  const parent = prev && depth > 0 ? prev.split('/').slice(0, depth).join('/') : '';
+  const newPath = parent ? parent + '/' + name : name;
+  const full = flatTags().map(x => x.path);
+  if (newPath !== path && full.includes(newPath)) { toast(`There is already a tag “${name}” there`); render(); return; }
+  const moving = full.filter(p => underTag(p, path)), rest = full.filter(p => !underTag(p, path));
+  let at = 0;
+  if (prev) {
+    if (depth > prevDepth) at = rest.indexOf(prev) + 1;
+    else { const anc = prev.split('/').slice(0, depth + 1).join('/'); at = rest.reduce((k, p, j) => underTag(p, anc) ? j + 1 : k, 0); }
+  }
+  const created = Object.fromEntries(tagList.map(x => [x.path, x.created]));
+  const moved = moving.map(p => ({ path: newPath + p.slice(path.length), created: created[p] || '' }));
+  const list = [...rest.slice(0, at).map(p => ({ path: p, created: created[p] || '' })), ...moved, ...rest.slice(at).map(p => ({ path: p, created: created[p] || '' }))];
+  const sameOrder = list.map(x => x.path).join('\n') === full.join('\n');
+  if (sameOrder && tagSort === 'custom' && tagList.length === full.length) return;
+  if (tagSort !== 'custom') { tagSort = 'custom'; try { localStorage.setItem('igor-tagsort', tagSort); } catch (er) {} toast('Sorted by your own order now'); }
+  if (newPath !== path) { const n = retag(path, newPath, list); toast(`Moved to ${parent ? parent.split('/').join(' › ') : 'top level'}${n ? ` · ${n} project${n === 1 ? '' : 's'} updated` : ''}`); }
+  else setText('PROJECTS', withTagList(ST.text.PROJECTS, list));
+}
 
 (async function init() {
   try { const v = localStorage.getItem('igor-view'); if (['today', 'board', 'week', 'projects', 'gantt', 'goals'].includes(v)) view = v; } catch (e) {}
