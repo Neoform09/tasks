@@ -10,7 +10,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='7' fill='%23c8643b'/%3E%3Cpath d='M10 16.5l4 4 8-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
 :root {
-  --fs: 1;
+  --fs: 1.15;
   --bg: #f6f5f1;
   --panel: #ffffff;
   --panel-2: #fbfaf7;
@@ -108,6 +108,55 @@ header {
 
 main { padding: 16px 24px 48px; }
 
+/* TickTick-style shell: smart lists + tags on the left, one list on the right */
+.tabs, #filters, #quickWrap { display: none !important; }
+header { padding-bottom: 12px; }
+.navbtn { display: none; border: 0; background: none; font-size: calc(22px * var(--fs)); padding: 0 6px 0 0; color: var(--text); }
+.shell { display: grid; grid-template-columns: 300px minmax(0, 1fr); align-items: start; }
+.nav { position: sticky; top: var(--hdr, 70px); max-height: calc(100vh - var(--hdr, 70px)); overflow-y: auto; padding: 14px 10px 40px 16px; border-right: 1px solid var(--line); background: var(--panel-2); min-height: calc(100vh - var(--hdr, 70px)); }
+.nav h4 { margin: 14px 8px 6px; font-size: calc(12px * var(--fs)); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 650; }
+.nitem { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 9px; color: var(--text); }
+.nitem:hover { background: var(--hover); }
+.nitem.on { background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 650; }
+.nitem .ic { width: 1.3em; text-align: center; flex: none; }
+.nitem .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nitem .n { color: var(--muted); font-size: .85em; }
+.nitem .n.bad { color: var(--danger); font-weight: 650; }
+.nav hr { border: 0; border-top: 1px solid var(--line); margin: 10px 4px; }
+.nav .ptags { position: relative; border: 0; background: none; padding: 0; top: auto; }
+.nav .ptags > summary { display: none !important; }
+.nav .ptags h3 { display: block !important; }
+.navshade { display: none; }
+
+.lhead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 2px 0 12px; max-width: 980px; }
+.lhead h1 { margin: 0; font-size: calc(24px * var(--fs)); font-weight: 700; }
+.lhead .sub { color: var(--muted); font-size: calc(13px * var(--fs)); }
+.tagfilter { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 2px 4px 2px 10px; font-size: calc(13px * var(--fs)); }
+.tagfilter button { border: 0; background: none; color: var(--muted); padding: 0 6px; }
+.addtask { display: block; width: 100%; max-width: 980px; border: 1px solid transparent; background: color-mix(in srgb, var(--text) 5%, var(--panel)); border-radius: 10px; padding: 11px 14px; margin-bottom: 14px; }
+.addtask:focus { outline: none; border-color: var(--accent); background: var(--panel); }
+.lgroup { max-width: 980px; margin-bottom: 14px; }
+.lgroup > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 2px; font-weight: 700; font-size: calc(14px * var(--fs)); }
+.lgroup > summary::-webkit-details-marker { display: none; }
+.lgroup > summary::before { content: '▾'; color: var(--muted); font-size: .8em; width: 1em; }
+.lgroup:not([open]) > summary::before { content: '▸'; }
+.lgroup > summary .t { color: var(--muted); font-weight: 500; font-size: .85em; }
+.lgroup.over > summary { color: var(--danger); }
+.task.trow { display: flex; align-items: center; gap: 10px; background: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: 9px 4px; margin: 0 !important; }
+.task.trow:hover { background: var(--hover); }
+.task.trow .check { margin: 0; flex: none; }
+.task.trow .body { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.task.trow .title { font-weight: 500; }
+.task.trow .ctx { font-size: calc(12.5px * var(--fs)); }
+.task.trow .rmeta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
+.task.trow .rmeta .dt { font-size: calc(12.5px * var(--fs)); color: var(--muted); white-space: nowrap; }
+.task.trow .rmeta .dt.over { color: var(--danger); }
+.task.trow .rmeta .dur { font-size: calc(11px * var(--fs)); font-weight: 700; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, #0f9b9b 16%, transparent); color: #0f8484; }
+.task.trow .del { opacity: 0; }
+.task.trow:hover .del { opacity: 1; }
+.stline { color: var(--muted); font-size: calc(13px * var(--fs)); margin: -6px 0 14px; max-width: 980px; }
+.stline b { color: var(--text); }
+
 .task {
   display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: start;
   background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
@@ -136,6 +185,8 @@ main { padding: 16px 24px 48px; }
   background: color-mix(in srgb, var(--c) 15%, transparent); color: var(--c);
 }
 .chip.tag { font-weight: 550; letter-spacing: 0; }
+.chip[data-ptag] { cursor: pointer; }
+.chip.on { background: var(--c); color: #fff; }
 .badge {
   font-size: calc(12px * var(--fs)); color: var(--muted); white-space: nowrap;
   padding: 1px 7px; border: 1px solid var(--line); border-radius: 6px;
@@ -213,6 +264,40 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .pcard { background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
 .phead { display: flex; align-items: center; gap: 10px; }
 .phead h2 { margin: 0; font-size: calc(17px * var(--fs)); flex: 1; }
+.pbarTop { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.pwrap { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 20px; align-items: start; }
+.ptags { position: sticky; top: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 10px 8px; font-size: calc(14px * var(--fs)); }
+.pthead { display: flex; align-items: center; gap: 4px; margin: 0 0 6px; }
+.pthead h3 { margin: 2px 8px !important; }
+.tbtn { border: 1px solid var(--line); background: var(--panel); color: var(--muted); font: inherit; font-size: .82em; padding: 2px 8px; border-radius: 999px; cursor: pointer; }
+.tbtn:hover { color: var(--text); }
+.tbtn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.ptags h3 { margin: 2px 8px 8px; font-size: calc(12px * var(--fs)); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 650; }
+.ptags summary { display: none; }
+.ptag { display: flex; align-items: center; gap: 4px; width: 100%; border: 0; background: none; color: var(--text); font: inherit; text-align: left; padding: 5px 8px; border-radius: 8px; cursor: pointer; }
+.ptag:hover { background: var(--hover); }
+.ptag.on { background: var(--accent); color: var(--accent-text); }
+.ptag .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ptag .n { opacity: .65; font-size: .85em; }
+.ptag .tw { width: 1.1em; flex: none; text-align: center; opacity: .6; border-radius: 4px; }
+.ptag .dh { width: 1em; flex: none; text-align: center; opacity: .3; cursor: grab; touch-action: none; user-select: none; letter-spacing: -2px; }
+.ptag .dh:hover { opacity: .8; }
+.ptag.on .dh { opacity: .6; }
+.ptag.dragging { opacity: .35; }
+.tdropline { position: absolute; right: 8px; height: 3px; border-radius: 2px; background: var(--accent); pointer-events: none; z-index: 5; }
+.tdropline::before { content: ''; position: absolute; left: -4px; top: -3px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--accent); background: var(--panel-2); box-sizing: border-box; }
+.tsortrow { display: flex; align-items: center; gap: 6px; padding: 0 8px 6px; color: var(--muted); font-size: .85em; }
+.tsortrow select { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 2px 4px; }
+.ptag .tw:hover { opacity: 1; background: var(--line); }
+.ptags hr { border: 0; border-top: 1px solid var(--line); margin: 6px 4px; }
+.ptchips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.ptchip { font-size: calc(11.5px * var(--fs)); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: var(--panel); cursor: pointer; }
+.ptchip.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.ptchip .par { opacity: .6; }
+.tagpick { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.btn.icon { padding-left: 10px; padding-right: 10px; }
+.chk { display: flex; align-items: center; gap: 8px; font-size: calc(14px * var(--fs)); }
+.chk input { width: calc(18px * var(--fs)); height: calc(18px * var(--fs)); }
 .pbar { height: 6px; background: var(--line); border-radius: 99px; margin: 12px 0 6px; overflow: hidden; }
 .pbar span { display: block; height: 100%; background: var(--proj); border-radius: 99px; }
 .pmeta { font-size: calc(12px * var(--fs)); color: var(--muted); margin-bottom: 12px; }
@@ -309,23 +394,6 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   .row2 { grid-template-columns: 1fr; }
 }
 
-
-/* select + tag */
-#selBtn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.task.sel { outline: 2px solid var(--accent); outline-offset: -1px; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
-body.selmode .task .body, body.selmode .task .check, body.selmode .task .del { pointer-events: none; }
-body.selmode .task { cursor: pointer; }
-.task.drop { outline: 2px dashed var(--accent); outline-offset: -1px; }
-.fchip.drop { outline: 2px dashed var(--accent); outline-offset: 2px; transform: scale(1.08); }
-body.dragging-tasks .fchip[data-tag] { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
-.fchip[data-tag] { cursor: grab; user-select: none; -webkit-user-select: none; }
-.dragghost { position: fixed; top: -100px; left: -100px; background: var(--accent); color: var(--accent-text); padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: calc(13px * var(--fs)); }
-#selbar { display: none; }
-#selbar.show { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -6px 20px rgba(0,0,0,.12); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
-#selbar .sb-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; font-size: calc(14px * var(--fs)); }
-#selbar .sb-hint { color: var(--muted); flex: 1; font-size: calc(12px * var(--fs)); }
-#selbar .sb-tags { display: flex; gap: 6px; flex-wrap: wrap; max-height: 34vh; overflow-y: auto; }
-body:has(#selbar.show) main { padding-bottom: 40vh; }
 /* sync + phone */
 .status { cursor: pointer; }
 .linkbar:empty { display: none; }
@@ -333,7 +401,7 @@ body:has(#selbar.show) main { padding-bottom: 40vh; }
 #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 999px; opacity: 0; transition: .2s; pointer-events: none; z-index: 50; font-size: calc(14px * var(--fs)); }
 #toast.show { opacity: 1; transform: translateX(-50%); }
 @media (max-width: 640px) {
-  :root { --fs: 1.85; }
+  :root { --fs: 2.05; }
   html, body { overflow-x: clip; }
   header { position: static; padding-top: 10px; }
   .tabs { overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
@@ -342,10 +410,49 @@ body:has(#selbar.show) main { padding-bottom: 40vh; }
   .filters:not(.open) .fchip { display: none; }
   .cols.week { grid-template-columns: 1fr; }
   .projects, .goals { grid-template-columns: 1fr; }
+  .navbtn { display: inline-block; }
+  .shell { grid-template-columns: 1fr; }
+  .nav { position: fixed; z-index: 30; left: 0; top: 0; bottom: 0; width: min(88vw, 420px); max-height: none; min-height: 0; transform: translateX(-102%); transition: transform .2s; box-shadow: 4px 0 24px rgba(0,0,0,.18); background: var(--panel-2); }
+  body.navopen .nav { transform: none; }
+  body.navopen .navshade { display: block; position: fixed; inset: 0; z-index: 29; background: rgba(0,0,0,.35); }
+  .task.trow .del { display: none; }
+  .task.trow { flex-wrap: wrap; align-items: flex-start; }
+  .task.trow .check { margin-top: 6px; }
+  .task.trow .body { flex: 1 1 calc(100% - 50px); }
+  .task.trow .rmeta { flex-basis: 100%; justify-content: flex-start; margin-left: 38px; }
+  .task.trow .rmeta:empty { display: none; }
+  .brand .today { display: none; }
+  .top { gap: 10px; }
+  .addtask { padding: 10px 12px; }
+  .pwrap { grid-template-columns: 1fr; gap: 12px; }
+  .ptags { position: relative; }
+  .ptags summary { display: block; cursor: pointer; padding: 4px 8px; font-weight: 600; color: var(--muted); }
+  .ptags h3 { display: none; }
+  .pthead { justify-content: flex-end; }
+  .ptags:not([open]) > :not(summary) { display: none; }
   .task { padding: 12px; grid-template-columns: 30px 1fr; }
   .task .right { grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: center; }
   .check { transform: scale(1.5); transform-origin: 50% 40%; margin: 6px 4px 0 2px; }
 }
+
+/* select + tag */
+#selBtn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.task.sel { outline: 2px solid var(--accent); outline-offset: -1px; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+body.selmode .task .body, body.selmode .task .check, body.selmode .task .del { pointer-events: none; }
+body.selmode .task { cursor: pointer; }
+.task.drop { outline: 2px dashed var(--accent); outline-offset: -1px; }
+.ptag.drop { outline: 2px dashed var(--accent); outline-offset: -2px; background: color-mix(in srgb, var(--accent) 12%, transparent); }
+body.dragging-tasks .ptag[data-tagdrop] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.dragghost { position: fixed; top: -100px; left: -100px; background: var(--accent); color: var(--accent-text); padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: calc(13px * var(--fs)); }
+#selbar { display: none; }
+#selbar.show { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -6px 20px rgba(0,0,0,.12); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
+#selbar .sb-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; font-size: calc(14px * var(--fs)); }
+#selbar .sb-hint { color: var(--muted); flex: 1; font-size: calc(12px * var(--fs)); }
+#selbar .sb-tags { display: flex; gap: 6px; flex-wrap: wrap; max-height: 34vh; overflow-y: auto; }
+#selbar .fchip { border: 1px solid color-mix(in srgb, var(--c) 35%, transparent); background: transparent; color: var(--c); padding: 4px 11px; border-radius: 999px; font-size: calc(13px * var(--fs)); font-weight: 600; }
+#selbar .fchip.on { background: var(--c); color: #fff; border-color: var(--c); }
+#selbar .fchip .n { opacity: .7; margin-left: 4px; }
+body:has(#selbar.show) main { padding-bottom: 40vh; }
 </style>
 </head>
 <body>
@@ -452,6 +559,7 @@ window.AppSync = (function () {
 
 <header>
   <div class="top">
+    <button class="navbtn" id="navBtn" aria-label="Menu">☰</button>
     <div class="brand">
       <h1>Igor's Tasks</h1>
       <div class="today" id="todayLbl"></div>
@@ -476,16 +584,19 @@ window.AppSync = (function () {
 <div class="quick" id="quickWrap">
   <input id="quick" placeholder="Quick add… e.g.  Call Amanda #FILM #EMP ~15m today   (press Enter)">
 </div>
-<main id="main"></main>
+<div class="shell" id="shell">
+  <aside class="nav" id="nav"></aside>
+  <div class="navshade" id="navShade"></div>
+  <main id="main"></main>
+</div>
 
 <dialog id="dlg">
   <form class="dlg" method="dialog" id="form">
     <h2 id="dlgTitle">Task</h2>
     <label class="field"><span>Title</span><input id="fTitle" required></label>
     <label class="field"><span>Details</span><input id="fCtx" placeholder="optional — time, place, who…"></label>
-    <div class="field"><span>Categories</span><div class="catpick" id="fCats"></div></div>
     <label class="field"><span>Project</span><input id="fProj" list="projList" placeholder="optional — e.g. Murgle - Fence"><datalist id="projList"></datalist></label>
-    <label class="field"><span>Other tags</span><input id="fTags" placeholder="e.g. call errand (space-separated)"></label>
+    <div class="field"><span>Tags — use / for sub-tags, e.g. MM/Murgle</span><input id="fTags" placeholder="e.g. FILM EMP MM/Murgle" autocomplete="off"><div class="tagpick" id="fTagPick"></div></div>
     <div class="row2">
       <label class="field"><span>Duration</span>
         <select id="fDur">
@@ -508,20 +619,66 @@ window.AppSync = (function () {
   </form>
 </dialog>
 
+<dialog id="tdlg">
+  <form class="dlg" method="dialog" id="tform">
+    <h2 id="tdlgTitle">Tag</h2>
+    <label class="field"><span>Under (parent tag)</span><select id="tParent"></select></label>
+    <label class="field"><span>Name</span><input id="tName" required placeholder="e.g. Murgle" autocomplete="off"></label>
+    <div class="hint" id="tInfo"></div>
+    <div class="actions">
+      <button type="button" class="btn danger" id="tDelBtn">Delete tag</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn" id="tCancelBtn">Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="pdlg">
+  <form class="dlg" method="dialog" id="pform">
+    <h2 id="pdlgTitle">Project</h2>
+    <label class="field"><span>Name</span><input id="pName" required placeholder="e.g. Murgle - Fence"></label>
+    <label class="field"><span>Description</span><input id="pDesc" placeholder="optional"></label>
+    <div class="field"><span>Tags — use / for sub-tags, e.g. MM/Murgle</span><input id="pTags" placeholder="e.g. MM/Murgle FIN" autocomplete="off"><div class="tagpick" id="pTagPick"></div></div>
+    <div class="row2">
+      <label class="field"><span>Type</span>
+        <select id="pKind"><option value="project">Project</option><option value="area">Ongoing area</option><option value="archived">Archived (hidden)</option></select>
+      </label>
+      <label class="field"><span>Start</span><input type="date" id="pStart"></label>
+      <label class="field"><span>Deadline</span><input type="date" id="pDeadline"></label>
+    </div>
+    <label class="chk" id="pDelTasksWrap"><input type="checkbox" id="pDelTasks"> <span id="pDelTasksTxt">Also delete its tasks</span></label>
+    <div class="actions">
+      <button type="button" class="btn danger" id="pDelBtn">Delete project</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn" id="pCancelBtn">Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
 <script>
 /* ============================================================
-   YOUR CATEGORIES — edit freely (key, description, color).
+   TAGS — everything is a tag (no separate categories).
    ============================================================ */
-const CATEGORIES = [
-  { key: 'FILM', label: 'Film / casting',      color: '#8b5cf6' },
-  { key: 'EMP',  label: 'Self-employed work',  color: '#2f9e57' },
-  { key: 'JOB',  label: 'Job applications',    color: '#2f76d2' },
-  { key: 'FIN',  label: 'Finance',             color: '#c98a1c' },
-  { key: 'SSS',  label: 'Trading',             color: '#0f9b9b' },
-];
+// Everything is tags. A tag's colour comes from its top-level tag (MM/Murgle is coloured like MM).
+const TAG_COLORS = { FILM: '#8b5cf6', EMP: '#2f9e57', JOB: '#2f76d2', FIN: '#c98a1c', SSS: '#0f9b9b' };
+const TAG_PALETTE = ['#d0663f', '#8b5cf6', '#2f9e57', '#2f76d2', '#c98a1c', '#0f9b9b', '#c2477a', '#6b7f2a', '#7a5c3e', '#5560c9'];
 const OTHER_COLOR = '#8a8780';
-const CAT_KEYS = CATEGORIES.map(c => c.key);
-const catColor = k => (CATEGORIES.find(c => c.key === k) || {}).color || OTHER_COLOR;
+function tagColor(t) {
+  const top = String(t).split('/')[0];
+  if (TAG_COLORS[top]) return TAG_COLORS[top];
+  let h = 0; for (const ch of top) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return TAG_PALETTE[h % TAG_PALETTE.length];
+}
+const tagLabel = t => String(t).split('/').join(' › ');
+// "EMP" typed alone means "PRO/EMP" when that is the only tag called EMP
+function resolveTag(t) {
+  if (!t || t.includes('/')) return t;
+  const all = allTagPaths(); if (all.includes(t)) return t;
+  const hits = all.filter(p => p.split('/').pop().toLowerCase() === t.toLowerCase());
+  return hits.length === 1 ? hits[0] : t;
+}
 
 let doc = { preamble: ['# Tasks'], sections: [] };
 let view = 'today', weekOffset = 0, editing = null, presetProj = null;
@@ -563,7 +720,7 @@ function parseTaskLine(line) {
     if (!h && !mi) return all; t.dur = (+h || 0) * 60 + (+mi || 0); return sp;
   });
   rest = rest.replace(/\[\[(.+?)\]\]/, (_, pr) => { t.proj = pr.trim(); return ''; });
-  rest = rest.replace(/(^|\s)#([\p{L}\p{N}_-]+)/gu, (_, sp, tg) => { t.tags.push(tg); return sp; });
+  rest = rest.replace(/(^|\s)#([\p{L}\p{N}_\-\/.]+)/gu, (_, sp, tg) => { tg = tg.split('/').filter(Boolean).join('/'); if (tg && !t.tags.includes(tg)) t.tags.push(tg); return sp; });
   rest = rest.replace(/~~/g, '');
   const tm = rest.match(/\*\*(.+?)\*\*/);
   if (tm) { t.title = tm[1]; t.ctx = rest.slice(tm.index + tm[0].length); }
@@ -626,14 +783,15 @@ const doneSection = () => sectionByName('Done');
 const activeSection = () => sectionByName('Active') || doc.sections[0];
 const isWaiting = s => /waiting/i.test(s.name);
 
+// a task's tags = its own tags + the tags of its project
+const taskAllTags = t => [...new Set([...t.tags, ...projTags(t.proj)])];
 function passesFilter(t) {
-  if (!filters.size) return true;
-  for (const f of filters) {
-    if (f.startsWith('P:')) { if (t.proj === f.slice(2)) return true; continue; }
-    if (f === '__none') { if (!t.tags.some(x => CAT_KEYS.includes(x))) return true; }
-    else if (t.tags.includes(f)) return true;
+  if (projTag) {
+    const tags = taskAllTags(t);
+    if (projTag === '__none' ? tags.length : !tagMatch(tags, projTag)) return false;
   }
-  return false;
+  const pf = [...filters].filter(f => f.startsWith('P:'));
+  return !pf.length || pf.some(f => t.proj === f.slice(2));
 }
 
 function moveTask(id, secName) {
@@ -661,20 +819,20 @@ const SKEY = 'tasks-state';
 let ST = (() => { try { return JSON.parse(localStorage.getItem(SKEY)) || null; } catch (e) { return null; } })()
   || { text: { TASKS: '', PROJECTS: '', GOALS: '' }, base: {}, fbase: {} };
 ST.base = ST.base || {}; ST.fbase = ST.fbase || {};
-let goalsText = null, goals = null, projText = null, projList = [];
+let goalsText = null, goals = null, projText = null, projList = [], tagList = [];
 let lastSync = 0, syncErr = '', syncing = false, syncAgain = false, syncTimer = null;
 
 const persist = () => { try { localStorage.setItem(SKEY, JSON.stringify(ST)); } catch (e) {} };
 const syncPass = () => { try { return JSON.parse(localStorage.getItem('appsync-pass')) || ''; } catch (e) { return ''; } };
-const dlgOpen = () => document.getElementById('dlg').open;
+const dlgOpen = () => ['dlg', 'pdlg', 'tdlg'].some(id => document.getElementById(id).open) || !!window.__tagDragging;
 
 function applyAll() {
   doc = parseDoc(ST.text.TASKS || '# Tasks');
   goalsText = ST.text.GOALS; goals = goalsText ? parseGoals(goalsText) : null;
   projText = ST.text.PROJECTS; projList = projText ? parseProjects(projText) : [];
+  tagList = projText ? parseTagList(projText) : [];
 }
 function setText(k, text) {
-  // keep the current selection when the list is re-read after a local change
   let pos = null;
   if (k === 'TASKS' && typeof sel !== 'undefined' && sel.size) pos = doc.sections.flatMap((sc, i) => sc.items.map((t, j) => sel.has(t.id) ? [i, j] : null)).filter(Boolean);
   ST.text[k] = text; persist(); applyAll();
@@ -843,10 +1001,12 @@ function parseProjects(text) {
   const out = []; let kind = 'project';
   for (const line of text.split(/\r?\n/)) {
     const h = line.match(/^##\s+(.+?)\s*$/);
-    if (h) { kind = /area/i.test(h[1]) ? 'area' : /archiv|done/i.test(h[1]) ? 'archived' : 'project'; continue; }
+    if (h) { kind = /^tags?$/i.test(h[1].trim()) ? 'tagsec' : /area/i.test(h[1]) ? 'area' : /archiv|done/i.test(h[1]) ? 'archived' : 'project'; continue; }
+    if (kind === 'tagsec') continue;
     const m = line.match(/^\s*-\s+\*\*(.+?)\*\*(.*)$/); if (!m) continue;
-    const p = { name: m[1].trim(), kind, desc: '', start: null, deadline: null };
+    const p = { name: m[1].trim(), kind, desc: '', start: null, deadline: null, tags: [] };
     let rest = m[2];
+    rest = rest.replace(/(^|\s)#([\p{L}\p{N}_\-\/.]+)/gu, (_, sp, t) => { t = cleanTag(t); if (t && !p.tags.includes(t)) p.tags.push(t); return sp; });
     rest = rest.replace(/📅\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/u, (_, d, mo, y) => { p.deadline = ymd(y, mo, d); return ''; });
     rest = rest.replace(/▶️?\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/u, (_, d, mo, y) => { p.start = ymd(y, mo, d); return ''; });
     p.desc = rest.replace(/^\s*[-–—:]\s*/, '').replace(/\s+/g, ' ').trim();
@@ -855,6 +1015,10 @@ function parseProjects(text) {
   return out;
 }
 const projMeta = n => projList.find(p => p.name === n);
+const cleanTag = t => String(t).replace(/^#/, '').split('/').map(x => x.trim()).filter(Boolean).join('/');
+const projTags = n => (projMeta(n) || {}).tags || [];
+// a project matches a tag if it has that tag or any sub-tag under it
+const tagMatch = (tags, sel) => sel === '__none' ? !tags.length : tags.some(t => t === sel || t.startsWith(sel + '/'));
 
 function todayRhythm() {
   if (!goals) return null;
@@ -886,7 +1050,7 @@ function renderGoals() {
       <div class="pbar"><span style="width:${pct}%"></span></div>
       <div class="pmeta">${d} of ${n} reached · ${pct}%</div>
       ${s.goals.map(gl => {
-        const chips = gl.tags.map(c => `<span class="chip" style="--c:${catColor(c)}">${esc(c)}</span>`).join('');
+        const chips = gl.tags.map(c => `<span class="chip" style="--c:${tagColor(c)}">${esc(c)}</span>`).join('');
         return `<div class="goal ${gl.done ? 'done' : ''}"><button class="check" data-goal="${gl.line}" title="${gl.done ? 'Mark not reached' : 'Mark reached'}"></button>
           <div><div class="gt">${esc(gl.title)}</div>${gl.ctx ? `<div class="ctx">${esc(gl.ctx)}</div>` : ''}${chips ? `<div class="meta">${chips}</div>` : ''}</div></div>`;
       }).join('')}
@@ -909,10 +1073,7 @@ function setStatus(kind, txt) {
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function taskHTML(t, opts = {}) {
-  const cats = t.tags.filter(x => CAT_KEYS.includes(x));
-  const other = t.tags.filter(x => !CAT_KEYS.includes(x));
-  const chips = cats.map(c => `<span class="chip" style="--c:${catColor(c)}" title="${esc((CATEGORIES.find(k => k.key === c) || {}).label || c)}">${esc(c)}</span>`).join('')
-    + other.map(c => `<span class="chip tag" style="--c:${OTHER_COLOR}">#${esc(c)}</span>`).join('');
+  const chips = t.tags.map(c => `<span class="chip ${projTag === c ? 'on' : ''}" style="--c:${tagColor(c)}" data-ptag="${esc(c)}" title="Show everything tagged ${esc(tagLabel(c))}">${esc(tagLabel(c))}</span>`).join('');
   const over = t.date && !t.done && t.date < todayYmd();
   const dateB = t.date && !opts.hideDate ? `<span class="badge ${over ? 'over' : ''}">📅 ${esc(niceDate(t.date))}</span>` : '';
   const projB = t.proj && !opts.hideProject ? `<span class="chip proj" data-proj="${esc(t.proj)}">▣ ${esc(t.proj)}</span>` : '';
@@ -931,17 +1092,13 @@ function taskHTML(t, opts = {}) {
 
 function renderFilters() {
   const tasks = allTasks().filter(x => !x.t.done).map(x => x.t);
-  const count = k => k.startsWith('P:') ? tasks.filter(t => t.proj === k.slice(2)).length : k === '__none' ? tasks.filter(t => !t.tags.some(x => CAT_KEYS.includes(x))).length : tasks.filter(t => t.tags.includes(k)).length;
-  const extra = [...new Set(tasks.flatMap(t => t.tags).filter(x => !CAT_KEYS.includes(x)))].sort();
+  const count = k => tasks.filter(t => t.proj === k.slice(2)).length;
   const chip = (k, label, color, title) =>
-    `<${isTagKey(k) ? 'span role="button" tabindex="0" draggable="true" data-tag="' + esc(k) + '"' : 'button'} class="fchip ${filters.has(k) ? 'on' : ''}" data-f="${esc(k)}" style="--c:${color}" title="${esc(title || (isTagKey(k) ? 'Drag onto a task to tag it' : ''))}">${esc(label)}<span class="n">${count(k)}</span></${isTagKey(k) ? 'span' : 'button'}>`;
+    `<button class="fchip ${filters.has(k) ? 'on' : ''}" data-f="${esc(k)}" style="--c:${color}" title="${esc(title || '')}">${esc(label)}<span class="n">${count(k)}</span></button>`;
   document.getElementById('filters').innerHTML =
-    `<button type="button" class="lbl fbtn" data-ftoggle>Filter${filters.size ? ' (' + filters.size + ')' : ''} <span class="car">▾</span></button>` +
+    `<button type="button" class="lbl fbtn" data-ftoggle>Projects${filters.size ? ' (' + filters.size + ')' : ''} <span class="car">▾</span></button>` +
     `<button class="fchip ${filters.size ? '' : 'on'}" data-f="__all" style="--c:var(--text)">All</button>` +
-    CATEGORIES.map(c => chip(c.key, c.key, c.color, c.label)).join('') +
-    projects().map(pr => chip('P:' + pr, '▣ ' + pr, 'var(--proj)', 'Project')).join('') +
-    extra.map(k => chip(k, '#' + k, OTHER_COLOR)).join('') +
-    chip('__none', 'No category', OTHER_COLOR, 'Tasks without a category');
+    projects().map(pr => chip('P:' + pr, '▣ ' + pr, 'var(--proj)', 'Project')).join('');
 }
 
 function renderToday() {
@@ -970,6 +1127,87 @@ function renderToday() {
     ${projOpen ? `<p class="hint" style="max-width:760px">+ ${projOpen} open project task${projOpen > 1 ? 's' : ''} without a date — see <a href="#" data-goto="projects">Projects</a>. Give a task a date to see it here.</p>` : ''}
     ${waiting.length ? group('Waiting on', waiting) : ''}
     ${doneToday.length ? group('Done today', doneToday, { hideDate: true, compact: true }) : ''}`;
+}
+
+/* ---------- TickTick-style lists: All, Today, Tomorrow, Next 7 Days, Inbox, one project ---------- */
+const LIST_VIEWS = ['all', 'today', 'tomorrow', 'next7', 'inbox', 'proj'];
+let curProj = (() => { try { return localStorage.getItem('igor-proj') || ''; } catch (e) { return ''; } })();
+const isInbox = t => !t.done && !t.date && !t.proj && !taskAllTags(t).length;
+function listScope(v) {
+  const t0 = todayYmd(), t1 = addDays(t0, 1), t6 = addDays(t0, 6);
+  const open = allTasks().filter(x => !x.t.done);
+  const f = v === 'inbox' ? open : open.filter(x => passesFilter(x.t));
+  if (v === 'inbox') return f.filter(x => isInbox(x.t));
+  if (v === 'today') return f.filter(x => x.t.date && x.t.date <= t0);
+  if (v === 'tomorrow') return f.filter(x => x.t.date === t1);
+  if (v === 'next7') return f.filter(x => x.t.date && x.t.date <= t6);
+  if (v === 'proj') return f.filter(x => x.t.proj === curProj);
+  return f;
+}
+function rowHTML(t, s, opts = {}) {
+  const t0 = todayYmd(), over = t.date && !t.done && t.date < t0;
+  const tags = t.tags.map(c => `<span class="chip ${projTag === c ? 'on' : ''}" style="--c:${tagColor(c)}" data-ptag="${esc(c)}" title="Show everything tagged ${esc(tagLabel(c))}">${esc(c.split('/').pop())}</span>`).join('');
+  const proj = t.proj && !opts.hideProject ? `<span class="chip proj" title="Project">▣ ${esc(t.proj)}</span>` : '';
+  const wait = s && isWaiting(s) ? `<span class="chip" style="--c:${OTHER_COLOR}">waiting</span>` : '';
+  const dt = t.date && !opts.hideDate ? `<span class="dt ${over ? 'over' : ''}">${esc(niceDate(t.date))}</span>` : '';
+  return `<div class="task trow ${t.done ? 'done' : ''} ${sel.has(t.id) ? 'sel' : ''}" draggable="true" data-id="${t.id}">
+    <button class="check" data-act="toggle" title="${t.done ? 'Mark not done' : 'Mark done'}"></button>
+    <div class="body" data-act="edit"><span class="title">${esc(t.title)}</span>${t.ctx && !opts.compact ? `<span class="ctx">${esc(t.ctx)}</span>` : ''}</div>
+    <div class="rmeta">${t.dur ? `<span class="dur">${durNice(t.dur)}</span>` : ''}${tags}${proj}${wait}${dt}<button class="del" data-act="del" title="Delete task">🗑</button></div>
+  </div>`;
+}
+const VIEW_TITLE = { all: 'All', today: 'Today', tomorrow: 'Tomorrow', next7: 'Next 7 Days', inbox: 'Inbox' };
+function renderList() {
+  const t0 = todayYmd(), t1 = addDays(t0, 1), t6 = addDays(t0, 6);
+  const items = listScope(view);
+  const sum = a => a.reduce((n, x) => n + (x.t.dur || 0), 0);
+  const byDate = (a, b) => (a.t.date || '9999').localeCompare(b.t.date || '9999');
+  const grp = (key, title, list, opts = {}, cls = '') => list.length ? `<details class="lgroup ${cls}" open data-g="${key}"><summary>${title}<span class="t">${list.length}${sum(list) ? ' · ' + durNice(sum(list)) : ''}</span></summary>
+      ${list.map(x => rowHTML(x.t, x.s, opts)).join('')}</details>` : '';
+  const title = view === 'proj' ? '▣ ' + curProj : VIEW_TITLE[view];
+  const tf = projTag && view !== 'inbox' ? `<span class="tagfilter">${projTag === '__none' ? 'No tag' : '# ' + esc(tagLabel(projTag))}<button data-ptag="" title="Clear tag filter">✕</button></span>` : '';
+  const place = view === 'today' ? 'Today' : view === 'tomorrow' ? 'Tomorrow' : view === 'next7' ? 'Today' : view === 'proj' ? curProj
+    : view === 'all' && projTag && projTag !== '__none' ? '# ' + tagLabel(projTag) : 'Inbox';
+  let html = `<div class="lhead"><h1>${esc(title)}</h1>${tf}${view === 'proj' ? `<button class="btn icon" data-editproj="${esc(curProj)}" title="Edit project">✎</button>` : ''}</div>
+    <input class="addtask" data-add placeholder="+ Add task to “${esc(place)}”   e.g. Call Amanda #EMP ~15m tomorrow  (Enter)">`;
+  if (view === 'today') {
+    const doneToday = allTasks().filter(x => x.t.done && x.t.doneDate === t0 && passesFilter(x.t));
+    const r = todayRhythm();
+    html += `<div class="stline"><b>${items.length}</b> to do · <b>${durNice(sum(items))}</b> planned · <b>${doneToday.length}</b> done today${r ? ` · training: <b>${esc(r)}</b>` : ''}</div>`;
+  }
+  if (view === 'all' || view === 'proj') {
+    const b = { over: [], today: [], tom: [], week: [], later: [], none: [] };
+    for (const x of items) { const d = x.t.date; (!d ? b.none : d < t0 ? b.over : d === t0 ? b.today : d === t1 ? b.tom : d <= t6 ? b.week : b.later).push(x); }
+    ['over', 'week', 'later'].forEach(k => b[k].sort(byDate));
+    html += grp('over', 'Overdue', b.over, {}, 'over') + grp('today', 'Today', b.today, { hideDate: true }) + grp('tom', 'Tomorrow', b.tom, { hideDate: true })
+      + grp('week', 'Next 7 Days', b.week) + grp('later', 'Later', b.later) + grp('none', view === 'all' ? 'No date' : 'No date', b.none);
+  } else if (view === 'today') {
+    html += grp('over', 'Overdue', items.filter(x => x.t.date < t0).sort(byDate), {}, 'over') + grp('today', 'Today · ' + shortDate(t0), items.filter(x => x.t.date === t0), { hideDate: true });
+  } else if (view === 'next7') {
+    html += grp('over', 'Overdue', items.filter(x => x.t.date < t0).sort(byDate), {}, 'over');
+    for (let i = 0; i < 7; i++) { const d = addDays(t0, i); html += grp('d' + d, (i === 0 ? 'Today · ' : i === 1 ? 'Tomorrow · ' : '') + shortDate(d), items.filter(x => x.t.date === d), { hideDate: true }); }
+  } else {
+    html += grp('main', view === 'inbox' ? 'To sort' : 'Tomorrow · ' + shortDate(t1), items, { hideDate: view === 'tomorrow' });
+  }
+  if (!items.length) html += `<div class="empty" style="max-width:980px">${view === 'inbox' ? 'Inbox is empty — everything is sorted. 🎉' : 'Nothing here.'}</div>`;
+  if (view === 'inbox') html += `<p class="hint" style="max-width:980px">Inbox holds tasks with no date, no tag and no project. Give a task any of these and it moves out of the Inbox.</p>`;
+  const done = view === 'today' ? allTasks().filter(x => x.t.done && x.t.doneDate === t0 && passesFilter(x.t))
+    : view === 'proj' ? allTasks().filter(x => x.t.done && x.t.proj === curProj) : [];
+  if (done.length) html += `<details class="lgroup" data-g="done"><summary>Completed<span class="t">${done.length}</span></summary>${done.map(x => rowHTML(x.t, x.s, { compact: true })).join('')}</details>`;
+  return html;
+}
+function renderNav() {
+  const t0 = todayYmd();
+  const n = v => listScope(v).length;
+  const over = allTasks().filter(x => !x.t.done && x.t.date && x.t.date < t0 && passesFilter(x.t)).length;
+  const item = (v, ic, label, cnt, extra = '') => `<button class="nitem ${view === v ? 'on' : ''}" data-goview="${v}"><span class="ic">${ic}</span><span class="nm">${label}</span>${cnt != null ? `<span class="n ${extra}">${cnt}</span>` : ''}</button>`;
+  const projs = projects().map(p => { const c = allTasks().filter(x => !x.t.done && x.t.proj === p && passesFilter(x.t)).length;
+    return `<button class="nitem ${view === 'proj' && curProj === p ? 'on' : ''}" data-goproj="${esc(p)}"><span class="ic" style="color:var(--proj)">▣</span><span class="nm">${esc(p)}</span><span class="n">${c || ''}</span></button>`; }).join('');
+  return item('all', '☰', 'All', n('all')) + item('today', '◉', 'Today', n('today'), over ? 'bad' : '') + item('tomorrow', '☀', 'Tomorrow', n('tomorrow'))
+    + item('next7', '7', 'Next 7 Days', n('next7')) + item('inbox', '⇣', 'Inbox', n('inbox'))
+    + `<hr>${renderTagSide(projects(), true)}<hr><h4>Projects</h4>${projs || '<div class="empty" style="padding:2px 10px">No projects yet.</div>'}`
+    + `<button class="nitem" data-newproj><span class="ic">+</span><span class="nm">New project</span></button>`
+    + `<hr><h4>Views</h4>` + item('board', '▦', 'Board', null) + item('week', '▤', 'Week', null) + item('projects', '▣', 'Projects overview', null) + item('gantt', '≡', 'Gantt', null) + item('goals', '◎', 'Goals', null);
 }
 
 function renderBoard() {
@@ -1024,12 +1262,85 @@ function daysLeftTxt(s) {
   return n > 1 ? `${n} days left` : n === 1 ? 'due tomorrow' : n === 0 ? 'due today' : `${-n} day${n < -1 ? 's' : ''} overdue`;
 }
 
+/* ---------- project tag tree (left side) ---------- */
+let tagsOpenPhone = false, tagEdit = false;
+let projTag = (() => { try { return localStorage.getItem('igor-ptag') || ''; } catch (e) { return ''; } })();
+const tagClosed = new Set((() => { try { return JSON.parse(localStorage.getItem('igor-ptag-closed')) || []; } catch (e) { return []; } })());
+const saveTagUi = () => { try { localStorage.setItem('igor-ptag', projTag); localStorage.setItem('igor-ptag-closed', JSON.stringify([...tagClosed])); } catch (e) {} };
+let tagSort = (() => { try { return localStorage.getItem('igor-tagsort') || 'custom'; } catch (e) { return 'custom'; } })();
+const TAG_SORTS = [['custom', 'My order'], ['alpha', 'A–Z'], ['tasks', 'Most tasks'], ['newest', 'Newest first'], ['oldest', 'Oldest first']];
+function tagTree(names) {
+  const root = { kids: new Map() };
+  const ensure = (t, i, created) => {
+    let node = root, path = '';
+    for (const part of t.split('/')) {
+      path = path ? path + '/' + part : part;
+      if (!node.kids.has(part)) node.kids.set(part, { name: part, path, kids: new Map(), projs: new Set(), taskIds: new Set(), ord: Infinity, created: '' });
+      node = node.kids.get(part);
+      node.ord = Math.min(node.ord, i);
+    }
+    if (created) node.created = created;
+    return node;
+  };
+  tagList.forEach((x, i) => ensure(x.path, i, x.created));
+  const addPath = (t, fn) => { let node = root; for (const part of t.split('/')) { if (!node.kids.has(part)) ensure(t, Infinity); node = node.kids.get(part); fn(node); } };
+  for (const n of names) for (const t of projTags(n)) addPath(t, node => node.projs.add(n));
+  for (const { t } of allTasks()) for (const tg of taskAllTags(t)) addPath(tg, node => { if (!t.done) node.taskIds.add(t.id); });
+  const count = node => { node.tasks = node.taskIds.size; node.kids.forEach(count); };
+  root.kids.forEach(count);
+  return root;
+}
+function sortKids(node) {
+  const a = [...node.kids.values()], az = (x, y) => x.name.localeCompare(y.name, undefined, { numeric: true, sensitivity: 'base' });
+  const byOrd = (x, y) => (x.ord - y.ord) || az(x, y);
+  if (tagSort === 'alpha') return a.sort(az);
+  if (tagSort === 'tasks') return a.sort((x, y) => (y.tasks - x.tasks) || (y.projs.size - x.projs.size) || byOrd(x, y));
+  if (tagSort === 'newest') return a.sort((x, y) => (y.created || '').localeCompare(x.created || '') || byOrd(x, y));
+  if (tagSort === 'oldest') return a.sort((x, y) => (x.created || '').localeCompare(y.created || '') || byOrd(x, y));
+  return a.sort(byOrd);
+}
+// every tag in the order shown now (sub-tags right after their parent), collapsed ones included
+function flatTags() {
+  const out = [], walk = (n, d) => sortKids(n).forEach(k => { out.push({ path: k.path, depth: d }); walk(k, d + 1); });
+  walk(tagTree(projects()), 0); return out;
+}
+function renderTagSide(names, inNav) {
+  const tree = tagTree(names), pv = view === 'projects';
+  const openTasks = allTasks().filter(x => !x.t.done);
+  const untagged = pv ? names.filter(n => !projTags(n).length).length : openTasks.filter(x => !taskAllTags(x.t).length).length;
+  const allN = pv ? names.length : openTasks.length;
+  const row = (node, depth) => {
+    const kids = sortKids(node);
+    const open = !tagClosed.has(node.path);
+    const tw = kids.length ? `<span class="tw" data-ptoggle="${esc(node.path)}">${open ? '▾' : '▸'}</span>` : `<span class="tw"></span>`;
+    const np = node.projs.size;
+    const cnt = `<span class="n" title="${node.tasks} open task${node.tasks === 1 ? '' : 's'}${np ? ` · ${np} project${np === 1 ? '' : 's'}` : ''} (sub-tags included)">${node.tasks}${pv && np ? ` · ▣${np}` : ''}</span>`;
+    const tip = node.path + (node.created ? ` · added ${node.created}` : '');
+    return `<div role="button" tabindex="0" class="ptag ${projTag === node.path && !tagEdit ? 'on' : ''}" ${tagEdit ? '' : `draggable="true" data-tagdrop="${esc(node.path)}"`} data-row="${esc(node.path)}" data-depth="${depth}" ${tagEdit ? `data-tedit="${esc(node.path)}"` : `data-ptag="${esc(node.path)}"`} style="padding-left:${4 + depth * 16}px" title="${esc(tip)}"><span class="dh" data-drag="${esc(node.path)}" title="Drag: up/down to reorder, right/left to nest">⋮⋮</span>${tw}<span class="nm">${esc(node.name)}</span>${tagEdit ? '<span class="n">✎</span>' : cnt}</div>`
+      + (open ? kids.map(k => row(k, depth + 1)).join('') : '');
+  };
+  const top = sortKids(tree);
+  const wide = !window.matchMedia || !window.matchMedia('(max-width: 640px)').matches;
+  return `<details class="ptags" ${inNav || wide || tagsOpenPhone ? 'open' : ''}><summary>Tags${projTag ? ': ' + esc(projTag === '__none' ? 'No tag' : projTag) : ''}</summary>
+    <div class="pthead"><h3>Tags</h3><span class="spacer"></span><button class="tbtn" data-tnew>+ Tag</button><button class="tbtn ${tagEdit ? 'on' : ''}" data-tmode>${tagEdit ? 'Done' : 'Edit'}</button></div>
+    ${top.length ? `<div class="tsortrow"><span>Sort</span><select data-tsort>${TAG_SORTS.map(([k, l]) => `<option value="${k}" ${tagSort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
+    ${tagEdit ? '<div class="hint" style="padding:2px 8px 6px">Tap a tag to rename, move or delete it.</div>' : ''}
+    <button class="ptag ${!projTag ? 'on' : ''}" data-ptag=""><span class="tw"></span><span class="nm">${pv ? 'All projects' : 'All tasks'}</span><span class="n">${allN}</span></button>
+    <hr>${top.map(n => row(n, 0)).join('') || '<div class="empty" style="padding:4px 8px">No tags yet — tap <b>+ Tag</b>, or add tags to a task or project.</div>'}
+    ${untagged && top.length ? `<hr><button class="ptag ${projTag === '__none' ? 'on' : ''}" data-ptag="__none"><span class="tw"></span><span class="nm">No tag</span><span class="n">${untagged}</span></button>` : ''}
+  </details>`;
+}
+
 function renderProjects() {
-  const list = projects().filter(p => !filters.size || [...filters].every(f => !f.startsWith('P:')) || filters.has('P:' + p));
-  if (!list.length) return `<div class="empty">No projects yet. Open a task and fill in <b>Project</b>, or add <code>[[Project name]]</code> to a task in TASKS.md.</div>`;
-  return `<div class="projects">${list.map(p => {
+  const names = projects();
+  const list = names.filter(p => !filters.size || [...filters].every(f => !f.startsWith('P:')) || filters.has('P:' + p))
+    .filter(p => !projTag || (projTag === '__none' ? !projTags(p).length
+      : tagMatch(projTags(p), projTag) || allTasks().some(x => x.t.proj === p && tagMatch(x.t.tags, projTag))));
+  const top = `<div class="pbarTop"><button class="btn primary" data-newproj>+ New project</button></div>`;
+  if (!list.length) return `${top}<div class="empty">${names.length ? 'No projects with this tag.' : 'No projects yet. Tap <b>+ New project</b>, or open a task and fill in <b>Project</b>.'}</div>`;
+  return `${top}<div class="projects">${list.map(p => {
     const all = allTasks().filter(x => x.t.proj === p);
-    const shown = all.filter(x => passesFilter(x.t) || [...filters].every(f => f.startsWith('P:')));
+    const shown = all.filter(x => passesFilter(x.t));
     const open = shown.filter(x => !x.t.done), done = shown.filter(x => x.t.done);
     const nDone = all.filter(x => x.t.done).length, pct = all.length ? Math.round(nDone / all.length * 100) : 0;
     const left = open.reduce((n, x) => n + (x.t.dur || 0), 0);
@@ -1037,7 +1348,8 @@ function renderProjects() {
     const over = m.deadline && m.deadline < todayYmd() && nDone < all.length;
     const due = m.deadline ? ` · <span class="${over ? 'bad' : ''}">📅 ${esc(shortDate(m.deadline))} · ${daysLeftTxt(m.deadline)}</span>` : m.kind === 'area' ? ' · ongoing area' : '';
     return `<section class="pcard">
-      <div class="phead"><h2>${esc(p)}</h2><button class="btn" data-addproj="${esc(p)}">+ Add task</button></div>
+      <div class="phead"><h2>${esc(p)}</h2><button class="btn" data-addproj="${esc(p)}">+ Add task</button><button class="btn icon" data-editproj="${esc(p)}" title="Edit or delete project">✎</button></div>
+      ${(m.tags || []).length ? `<div class="ptchips">${m.tags.map(t => { const i = t.lastIndexOf('/'); return `<span class="ptchip ${projTag === t ? 'on' : ''}" data-ptag="${esc(t)}" title="Show projects tagged ${esc(t)}">${i > 0 ? `<span class="par">${esc(t.slice(0, i).split('/').join(' › '))} › </span>` : ''}${esc(t.slice(i + 1))}</span>`; }).join('')}</div>` : ''}
       ${m.desc ? `<div class="ctx" style="margin-top:4px">${esc(m.desc)}</div>` : ''}
       <div class="pbar"><span style="width:${pct}%"></span></div>
       <div class="pmeta">${nDone} of ${all.length} done · ${pct}%${left ? ' · ' + durNice(left) + ' left' : ''}${due}</div>
@@ -1163,14 +1475,21 @@ function renderConnect(unsupported, needsReconnect) {
 }
 
 function render() {
+  setTimeout(() => { if (typeof sel !== 'undefined' && (sel.size || selMode)) refreshSel(); }, 0);
   document.getElementById('todayLbl').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   document.getElementById('filters').style.display = '';
   document.getElementById('quickWrap').style.display = '';
   renderFilters();
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.view === view));
   const g0 = document.getElementById('gantt'); if (g0) ganttScroll = g0.scrollLeft;
-  document.getElementById('main').innerHTML = view === 'today' ? renderToday() : view === 'board' ? renderBoard() : view === 'projects' ? renderProjects() : view === 'goals' ? renderGoals() : view === 'gantt' ? renderGantt() : renderWeek();
-  if (typeof refreshSel === 'function' && (sel.size || selMode)) refreshSel();
+  if (projTag && projTag !== '__none' && !allTagPaths().includes(projTag)) { projTag = ''; saveTagUi(); }
+  if (view === 'proj' && !projects().includes(curProj)) view = 'all';
+  const addFocused = document.activeElement && document.activeElement.matches && document.activeElement.matches('[data-add]');
+  const navEl = document.getElementById('nav'), navScroll = navEl.scrollTop;
+  navEl.innerHTML = renderNav(); navEl.scrollTop = navScroll;
+  document.getElementById('main').innerHTML = LIST_VIEWS.includes(view) ? renderList() : view === 'board' ? renderBoard() : view === 'projects' ? renderProjects() : view === 'goals' ? renderGoals() : view === 'gantt' ? renderGantt() : renderWeek();
+  if (addFocused) { const a = document.querySelector('[data-add]'); if (a) a.focus(); }
+  document.documentElement.style.setProperty('--hdr', document.querySelector('header').offsetHeight + 'px');
   const g = document.getElementById('gantt');
   if (g) {
     if (ganttScroll == null) { const tl = g.querySelector('.g-head .g-today'); ganttScroll = Math.max(0, parseFloat(tl.style.left) - 10 * DW); }
@@ -1189,12 +1508,30 @@ document.getElementById('filters').addEventListener('click', e => {
   render();
 });
 
-const mainEl = document.getElementById('main');
+const mainEl = document.getElementById('shell');
 mainEl.addEventListener('click', e => {
+  if (Date.now() - lastTagDrag < 400 || e.target.closest('[data-drag]')) { e.preventDefault(); return; }
   const w = e.target.closest('[data-week]');
   if (w) { weekOffset = w.dataset.week === '0' ? 0 : weekOffset + Number(w.dataset.week); render(); return; }
+  const gv = e.target.closest('[data-goview]');
+  if (gv) { view = gv.dataset.goview; try { localStorage.setItem('igor-view', view); } catch (er) {} document.body.classList.remove('navopen'); render(); window.scrollTo(0, 0); return; }
+  const gp = e.target.closest('[data-goproj]');
+  if (gp) { view = 'proj'; curProj = gp.dataset.goproj; try { localStorage.setItem('igor-view', view); localStorage.setItem('igor-proj', curProj); } catch (er) {} document.body.classList.remove('navopen'); render(); window.scrollTo(0, 0); return; }
   const ap = e.target.closest('[data-addproj]');
   if (ap) { presetProj = ap.dataset.addproj; openEditor(null); return; }
+  if (e.target.closest('[data-newproj]')) { openProjEditor(null); return; }
+  const sm = e.target.closest('.ptags > summary');
+  if (sm) { tagsOpenPhone = !sm.parentElement.open; return; }
+  if (e.target.closest('[data-tmode]')) { e.preventDefault(); tagEdit = !tagEdit; render(); return; }
+  if (e.target.closest('[data-tnew]')) { e.preventDefault(); openTagEditor(null); return; }
+  const te = e.target.closest('[data-tedit]');
+  if (te && !e.target.closest('[data-ptoggle]')) { e.preventDefault(); openTagEditor(te.dataset.tedit); return; }
+  const tt = e.target.closest('[data-ptoggle]');
+  if (tt) { e.preventDefault(); const k = tt.dataset.ptoggle; tagClosed.has(k) ? tagClosed.delete(k) : tagClosed.add(k); saveTagUi(); render(); return; }
+  const pt = e.target.closest('[data-ptag]');
+  if (pt) { e.preventDefault(); const k = pt.dataset.ptag; projTag = projTag === k && k ? '' : k; saveTagUi(); render(); return; }
+  const ep = e.target.closest('[data-editproj]');
+  if (ep) { openProjEditor(ep.dataset.editproj); return; }
   const gb = e.target.closest('[data-goal]');
   if (gb) { toggleGoal(Number(gb.dataset.goal)); return; }
   const gt = e.target.closest('[data-goto]');
@@ -1227,6 +1564,13 @@ function deleteTask(id, btn) {
 
 let dragId = null, dragIds = [], dragTag = null;
 mainEl.addEventListener('dragstart', e => {
+  const tr = e.target.closest('[data-tagdrop]');
+  if (tr && !e.target.closest('.task')) {           // a tag from the tag list, to drop on a task
+    if (e.target.closest('[data-drag]')) { e.preventDefault(); return; }
+    dragTag = tr.dataset.tagdrop; dragId = null; dragIds = [];
+    e.dataTransfer.effectAllowed = 'copy'; try { e.dataTransfer.setData('text/plain', 'tag'); } catch (er) {}
+    document.body.classList.add('dragging-tag'); return;
+  }
   const t = e.target.closest('.task'); if (!t) return;
   dragId = Number(t.dataset.id); dragTag = null;
   dragIds = sel.has(dragId) ? [...sel] : [dragId];
@@ -1244,17 +1588,23 @@ function endDrag() {
 mainEl.addEventListener('dragover', e => {
   if (dragTag) { const t = e.target.closest('.task'); if (!t) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
     document.querySelectorAll('.task.drop').forEach(x => x !== t && x.classList.remove('drop')); t.classList.add('drop'); return; }
-  const c = e.target.closest('.col'); if (!c || dragId == null) return;
+  if (dragId == null) return;
+  const tg = e.target.closest('[data-tagdrop]');
+  if (tg) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; document.querySelectorAll('[data-tagdrop].drop').forEach(x => x !== tg && x.classList.remove('drop')); tg.classList.add('drop'); return; }
+  const c = e.target.closest('.col'); if (!c) return;
   e.preventDefault(); document.querySelectorAll('.col.drop').forEach(x => x !== c && x.classList.remove('drop')); c.classList.add('drop');
 });
-mainEl.addEventListener('dragleave', e => { const c = e.target.closest('.col, .task'); if (c && !c.contains(e.relatedTarget)) c.classList.remove('drop'); });
+mainEl.addEventListener('dragleave', e => { const c = e.target.closest('.col, .task, [data-tagdrop]'); if (c && !c.contains(e.relatedTarget)) c.classList.remove('drop'); });
 mainEl.addEventListener('drop', e => {
   if (dragTag) {
     const t = e.target.closest('.task'); if (!t) return; e.preventDefault();
     const id = Number(t.dataset.id), tag = dragTag;
     endDrag(); applyTag(sel.has(id) ? [...sel] : [id], tag); return;
   }
-  const c = e.target.closest('.col'); if (!c || dragId == null) return;
+  if (dragId == null) return;
+  const tg = e.target.closest('[data-tagdrop]');
+  if (tg) { e.preventDefault(); const ids = dragIds.slice(), tag = tg.dataset.tagdrop; endDrag(); applyTag(ids, tag); return; }
+  const c = e.target.closest('.col'); if (!c) return;
   e.preventDefault(); c.classList.remove('drop');
   for (const id of dragIds) {
     if (c.dataset.sec) moveTask(id, c.dataset.sec);
@@ -1262,41 +1612,17 @@ mainEl.addEventListener('drop', e => {
   }
   endDrag(); save();
 });
-/* tag chips in the filter bar: drop tasks on them, or drag them onto a task */
-const filtersEl = document.getElementById('filters');
-filtersEl.addEventListener('dragstart', e => {
-  const b = e.target.closest('[data-tag]'); if (!b) return;
-  dragTag = b.dataset.tag; dragId = null; dragIds = [];
-  e.dataTransfer.effectAllowed = 'copy'; try { e.dataTransfer.setData('text/plain', 'tag'); } catch (er) {}
-  document.body.classList.add('dragging-tag');
-});
-filtersEl.addEventListener('dragend', () => endDrag());
-filtersEl.addEventListener('dragover', e => {
-  const b = e.target.closest('[data-tag]'); if (!b || !dragIds.length) return;
-  e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
-  filtersEl.querySelectorAll('.drop').forEach(x => x !== b && x.classList.remove('drop')); b.classList.add('drop');
-});
-filtersEl.addEventListener('dragleave', e => { const b = e.target.closest('[data-tag]'); if (b && !b.contains(e.relatedTarget)) b.classList.remove('drop'); });
-filtersEl.addEventListener('drop', e => {
-  const b = e.target.closest('[data-tag]'); if (!b || !dragIds.length) return;
-  e.preventDefault(); const ids = dragIds.slice(), tag = b.dataset.tag; endDrag(); applyTag(ids, tag);
-});
 
 /* ---------- selecting several tasks + tagging ---------- */
 const sel = new Set(); let selMode = false;
-const isTagKey = k => !!k && !k.startsWith('P:') && !k.startsWith('__');
 function toggleSel(id) { sel.has(id) ? sel.delete(id) : sel.add(id); refreshSel(); }
 function clearSel() { sel.clear(); selMode = false; refreshSel(); }
 function refreshSel() {
   for (const id of [...sel]) if (!findTask(id)) sel.delete(id);
-  document.querySelectorAll('#main .task').forEach(el => el.classList.toggle('sel', sel.has(Number(el.dataset.id))));
+  document.querySelectorAll('.task[data-id]').forEach(el => el.classList.toggle('sel', sel.has(Number(el.dataset.id))));
   document.getElementById('selBtn').classList.toggle('on', selMode);
   document.body.classList.toggle('selmode', selMode);
   renderSelBar();
-}
-function allTagKeys() {
-  const extra = [...new Set(allTasks().flatMap(x => x.t.tags).filter(x => !CAT_KEYS.includes(x)))].sort();
-  return [...CAT_KEYS, ...extra];
 }
 function renderSelBar() {
   let bar = document.getElementById('selbar');
@@ -1305,22 +1631,21 @@ function renderSelBar() {
   const tasks = [...sel].map(id => findTask(id)).filter(Boolean).map(h => h.t);
   const chip = k => {
     const n = tasks.filter(t => t.tags.includes(k)).length, all = tasks.length && n === tasks.length;
-    const c = CAT_KEYS.includes(k) ? catColor(k) : OTHER_COLOR;
-    return `<button class="fchip ${all ? 'on' : ''}" data-stag="${esc(k)}" style="--c:${c}" title="${all ? 'Remove from selected' : 'Add to selected'}">${CAT_KEYS.includes(k) ? esc(k) : '#' + esc(k)}${n && !all ? `<span class="n">${n}</span>` : ''}</button>`;
+    return `<button class="fchip ${all ? 'on' : ''}" data-stag="${esc(k)}" style="--c:${tagColor(k)}" title="${esc(k)} · ${all ? 'remove from selected' : 'add to selected'}">${esc(tagLabel(k))}${n && !all ? `<span class="n">${n}</span>` : ''}</button>`;
   };
   bar.className = 'show';
   bar.innerHTML = `<div class="sb-top"><b>${sel.size ? sel.size + ' selected' : 'Tap tasks to select them'}</b>
       <span class="sb-hint">${sel.size ? 'Tap a tag to add it (tap again to remove)' : ''}</span>
       <button class="btn" data-sact="new">+ New tag</button><button class="btn" data-sact="done">Done</button></div>
-    <div class="sb-tags">${allTagKeys().map(chip).join('')}</div>`;
+    <div class="sb-tags">${allTagPaths().map(chip).join('')}</div>`;
 }
 function selBarClick(e) {
   const a = e.target.closest('[data-sact]');
   if (a && a.dataset.sact === 'done') { clearSel(); return; }
   if (a && a.dataset.sact === 'new') {
     if (!sel.size) { toast('Select tasks first'); return; }
-    const v = (prompt('New tag (one word):') || '').trim().replace(/^#/, '').replace(/\s+/g, '-');
-    if (v) applyTag([...sel], v, true); return;
+    const v = (prompt('New tag (use / for a sub-tag, e.g. PRO/FILM):') || '').trim().replace(/^#/, '').replace(/\s+/g, '-');
+    if (v) applyTag([...sel], v.split('/').filter(Boolean).join('/'), true); return;
   }
   const b = e.target.closest('[data-stag]'); if (!b) return;
   if (!sel.size) { toast('Select tasks first'); return; }
@@ -1328,20 +1653,38 @@ function selBarClick(e) {
 }
 /* add the tag to all given tasks; if they all have it already, remove it from all */
 function applyTag(ids, tag, forceAdd) {
-  const ts = ids.map(id => findTask(id)).filter(Boolean).map(h => h.t); if (!ts.length) return;
+  const ts = ids.map(id => findTask(id)).filter(Boolean).map(h => h.t); if (!ts.length || !tag) return;
   const remove = !forceAdd && ts.every(t => t.tags.includes(tag));
   for (const t of ts) {
     if (remove) t.tags = t.tags.filter(x => x !== tag);
     else if (!t.tags.includes(tag)) t.tags.push(tag);
     t.raw = null;
   }
-  const label = CAT_KEYS.includes(tag) ? tag : '#' + tag;
-  toast(remove ? `Removed ${label} from ${ts.length} task${ts.length > 1 ? 's' : ''}` : `Tagged ${ts.length} task${ts.length > 1 ? 's' : ''} ${label}`);
+  toast(remove ? `Removed ${tagLabel(tag)} from ${ts.length} task${ts.length > 1 ? 's' : ''}` : `Tagged ${ts.length} task${ts.length > 1 ? 's' : ''} ${tagLabel(tag)}`);
   save(); refreshSel();
 }
 document.getElementById('selBtn').onclick = () => { selMode = !selMode; if (!selMode) sel.clear(); refreshSel(); };
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && (sel.size || selMode) && !dlg.open) clearSel(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && (sel.size || selMode) && !dlgOpen()) clearSel(); });
 
+mainEl.addEventListener('keydown', e => {
+  const inp = e.target.closest('[data-add]'); if (!inp || e.key !== 'Enter') return;
+  let txt = inp.value.trim(); if (!txt) return;
+  let date = null;
+  txt = txt.replace(/(^|\s)(today|danes)(?=\s|$)/i, (_, sp) => { date = todayYmd(); return sp; })
+           .replace(/(^|\s)(tomorrow|jutri)(?=\s|$)/i, (_, sp) => { date = addDays(todayYmd(), 1); return sp; });
+  const t = parseTaskLine('- [ ] ' + txt.trim());
+  if (!t || !t.title) return;
+  t.tags = [...new Set(t.tags.map(resolveTag))];
+  if (date && !t.date) t.date = date;
+  if (!t.date && (view === 'today' || view === 'next7')) t.date = todayYmd();
+  if (!t.date && view === 'tomorrow') t.date = addDays(todayYmd(), 1);
+  if (view === 'proj' && !t.proj) t.proj = curProj;
+  if (projTag && projTag !== '__none' && view !== 'inbox' && !t.tags.length) t.tags.push(projTag);
+  activeSection().items.push(t);
+  inp.value = '';
+  save();
+  toast(isInbox(t) ? 'Added to Inbox' : 'Task added');
+});
 document.getElementById('quick').addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   let txt = e.target.value.trim(); if (!txt) return;
@@ -1351,6 +1694,7 @@ document.getElementById('quick').addEventListener('keydown', e => {
   const t = parseTaskLine('- [ ] ' + txt.trim());
   if (!t || !t.title) return;
   if (date && !t.date) t.date = date;
+  t.tags = [...new Set(t.tags.map(resolveTag))];
   if (!t.date && view === 'today') t.date = todayYmd();
   activeSection().items.push(t);
   e.target.value = '';
@@ -1362,14 +1706,15 @@ const $ = id => document.getElementById(id);
 function openEditor(id) {
   const hit = id ? findTask(id) : null;
   editing = hit ? hit.t.id : null;
-  const t = hit ? hit.t : { title: '', ctx: '', tags: [], proj: presetProj || '', dur: 0, date: view === 'today' && !presetProj ? todayYmd() : null, notes: [] };
+  if (!id && !presetProj && view === 'proj') presetProj = curProj;
+  const t = hit ? hit.t : { title: '', ctx: '', tags: [], proj: presetProj || '', dur: 0, date: presetProj ? null : (view === 'today' || view === 'next7') ? todayYmd() : view === 'tomorrow' ? addDays(todayYmd(), 1) : null, notes: [] };
   presetProj = null;
   $('fProj').value = t.proj || '';
   $('projList').innerHTML = projects().map(p => `<option value="${esc(p)}">`).join('');
   $('dlgTitle').textContent = hit ? 'Edit task' : 'New task';
   $('fTitle').value = t.title; $('fCtx').value = t.ctx;
-  $('fTags').value = t.tags.filter(x => !CAT_KEYS.includes(x)).join(' ');
-  $('fCats').innerHTML = CATEGORIES.map(c => `<button type="button" class="fchip ${t.tags.includes(c.key) ? 'on' : ''}" data-cat="${c.key}" style="--c:${c.color}" title="${esc(c.label)}">${c.key}</button>`).join('');
+  $('fTags').value = (hit ? t.tags : (projTag && projTag !== '__none' ? [projTag] : [])).join(' ');
+  renderTaskTagPick();
   const durSel = $('fDur');
   if (t.dur && ![...durSel.options].some(o => Number(o.value) === t.dur)) durSel.add(new Option(durNice(t.dur), t.dur));
   durSel.value = String(t.dur || 0);
@@ -1379,7 +1724,18 @@ function openEditor(id) {
   $('delBtn').style.display = hit ? '' : 'none';
   dlg.showModal(); $('fTitle').focus();
 }
-$('fCats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b) b.classList.toggle('on'); });
+const taskTyped = () => [...new Set($('fTags').value.split(/[\s,]+/).map(cleanTag).filter(Boolean).map(resolveTag))];
+function renderTaskTagPick() {
+  const cur = taskTyped();
+  $('fTagPick').innerHTML = allTagPaths().map(t => `<button type="button" class="ptchip ${cur.includes(t) ? 'on' : ''}" data-pick="${esc(t)}" style="${cur.includes(t) ? '' : `border-color:${tagColor(t)}66`}">${esc(tagLabel(t))}</button>`).join('');
+}
+$('fTags').addEventListener('input', renderTaskTagPick);
+$('fTagPick').addEventListener('click', e => {
+  const b = e.target.closest('[data-pick]'); if (!b) return;
+  const t = b.dataset.pick, cur = taskTyped();
+  $('fTags').value = (cur.includes(t) ? cur.filter(x => x !== t) : [...cur, t]).join(' ');
+  renderTaskTagPick();
+});
 $('cancelBtn').onclick = () => dlg.close();
 dlg.addEventListener('close', () => render());
 $('newBtn').onclick = () => openEditor(null);
@@ -1393,11 +1749,13 @@ $('delBtn').onclick = () => {
 $('form').addEventListener('submit', e => {
   e.preventDefault();
   const title = $('fTitle').value.trim(); if (!title) return;
-  const cats = [...$('fCats').querySelectorAll('.on')].map(b => b.dataset.cat);
-  const other = $('fTags').value.split(/[\s,]+/).map(s => s.replace(/^#/, '')).filter(Boolean);
+  const tags = taskTyped();
+  const known = new Set(allTagPaths()), fresh = [];
+  for (const tg of tags) { const parts = tg.split('/'); parts.forEach((_, i) => { const q = parts.slice(0, i + 1).join('/'); if (!known.has(q)) { known.add(q); fresh.push({ path: q, created: nowStamp() }); } }); }
+  if (fresh.length) ST.text.PROJECTS = withTagList(ST.text.PROJECTS, [...tagList, ...fresh]);
   const fields = {
     proj: $('fProj').value.trim(),
-    title, ctx: $('fCtx').value.trim(), tags: [...new Set([...cats, ...other])],
+    title, ctx: $('fCtx').value.trim(), tags,
     dur: Number($('fDur').value) || 0, date: $('fDate').value || null,
     notes: $('fNotes').value.split('\n').map(s => s.trim()).filter(Boolean), raw: null,
   };
@@ -1414,8 +1772,277 @@ $('form').addEventListener('submit', e => {
   dlg.close(); save();
 });
 
+/* ---------- add / edit / delete projects (stored in PROJECTS.md) ---------- */
+let editingProj = null;
+const KIND_HEAD = { project: 'Projects', area: 'Areas', archived: 'Archive' };
+const projLineRe = n => new RegExp('^\\s*-\\s+\\*\\*' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\*\\*');
+function projLine(p) {
+  let l = `- **${p.name}**`;
+  if (p.desc) l += ' — ' + p.desc;
+  if (p.start) l += ' ▶️ ' + fileDate(p.start);
+  if (p.deadline) l += ' 📅 ' + fileDate(p.deadline);
+  for (const t of p.tags || []) l += ' #' + t;
+  return l;
+}
+function kindOfHead(h) { return /^tags?$/i.test(h.trim()) ? 'tagsec' : /area/i.test(h) ? 'area' : /archiv|done/i.test(h) ? 'archived' : 'project'; }
+// tags that exist on their own (also before any project uses them): "## Tags" section of PROJECTS.md
+// each line: "- Parent/Child (added 2026-11-17 16:20)"; the line order is your custom order
+function parseTagList(text) {
+  const out = []; let on = false;
+  for (const line of text.split(/\r?\n/)) {
+    const h = line.match(/^##\s+(.+?)\s*$/);
+    if (h) { on = /^tags?$/i.test(h[1].trim()); continue; }
+    if (!on) continue;
+    const m = line.match(/^\s*-\s+(.+?)\s*(?:\(added\s+([^)]*)\))?\s*$/); if (!m) continue;
+    const t = cleanTag(m[1].trim().replace(/\s+/g, '-'));
+    if (t && !out.some(x => x.path === t)) out.push({ path: t, created: (m[2] || '').trim() });
+  }
+  return out;
+}
+const nowStamp = () => { const d = new Date(); return `${toYmd(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const tagPaths = () => tagList.map(x => x.path);
+// PROJECTS.md text with the "## Tags" section replaced by this list
+function withTagList(text, list) {
+  const lines = norm(text || '# Projects\n').split('\n'), out = []; let skip = false;
+  for (const l of lines) {
+    const h = l.match(/^##\s+(.+?)\s*$/);
+    if (h) skip = /^tags?$/i.test(h[1].trim());
+    if (!skip) out.push(l);
+  }
+  while (out.length && !out[out.length - 1].trim()) out.pop();
+  const seen = new Set(), uniq = [];
+  for (const x of list) { const o = typeof x === 'string' ? { path: x, created: '' } : x; if (o.path && !seen.has(o.path)) { seen.add(o.path); uniq.push(o); } }
+  if (uniq.length) out.push('', '## Tags', ...uniq.map(o => '- ' + o.path + (o.created ? ` (added ${o.created})` : '')));
+  return out.join('\n') + '\n';
+}
+// rewrite one project's line in place (keeps its position)
+function replaceProjLine(text, name, p) {
+  return norm(text).split('\n').map(l => projLineRe(name).test(l) ? projLine(p) : l).join('\n');
+}
+const allTagPaths = () => {
+  const set = new Set();
+  for (const t of [...tagPaths(), ...projList.flatMap(p => p.tags || []), ...allTasks().flatMap(x => x.t.tags)]) { const parts = t.split('/'); parts.forEach((_, i) => set.add(parts.slice(0, i + 1).join('/'))); }
+  return [...set].sort((a, b) => a.localeCompare(b));
+};
+const underTag = (t, path) => t === path || t.startsWith(path + '/');
+// rename/move a tag (and its sub-tags) everywhere; to=null deletes it
+function retag(from, to, newList) {
+  let text = ST.text.PROJECTS || '# Projects\n', n = 0;
+  const map = t => !underTag(t, from) ? t : to === null ? null : to + t.slice(from.length);
+  for (const p of projList) {
+    if (!(p.tags || []).some(t => underTag(t, from))) continue;
+    const tags = [...new Set(p.tags.map(map).filter(Boolean))];
+    text = replaceProjLine(text, p.name, { ...p, tags }); n++;
+  }
+  let tasksChanged = false;
+  for (const { t } of allTasks()) {
+    if (!t.tags.some(x => underTag(x, from))) continue;
+    t.tags = [...new Set(t.tags.map(map).filter(Boolean))]; t.raw = null; tasksChanged = true; n++;
+  }
+  if (tasksChanged) ST.text.TASKS = serialize();
+  let list = newList || tagList.map(x => ({ ...x, path: map(x.path) })).filter(x => x.path);
+  if (!newList && to !== null && !list.some(x => underTag(x.path, to))) list.push({ path: to, created: nowStamp() });
+  text = withTagList(text, list);
+  if (projTag && underTag(projTag, from)) projTag = to === null ? '' : to + projTag.slice(from.length);
+  [...tagClosed].forEach(k => { if (underTag(k, from)) { tagClosed.delete(k); if (to !== null) tagClosed.add(to + k.slice(from.length)); } });
+  saveTagUi();
+  setText('PROJECTS', text);
+  return n;
+}
+// returns PROJECTS.md text with the old project's line removed and (optionally) a new line added in the right section
+function editProjectsText(oldName, p) {
+  let lines = norm(ST.text.PROJECTS || '# Projects\n').split('\n');
+  if (oldName) lines = lines.filter(l => !projLineRe(oldName).test(l));
+  if (!p) return lines.join('\n');
+  let h = lines.findIndex(l => /^##\s/.test(l) && kindOfHead(l.replace(/^##\s+/, '')) === p.kind);
+  if (h < 0) {
+    let ti = lines.findIndex(l => /^##\s+tags?\s*$/i.test(l));
+    if (ti < 0) { while (lines.length && !lines[lines.length - 1].trim()) lines.pop(); ti = lines.length; }
+    const lead = ti > 0 && lines[ti - 1].trim() ? [''] : [];
+    lines.splice(ti, 0, ...lead, '## ' + KIND_HEAD[p.kind], ''); h = ti + lead.length;
+  }
+  let at = h + 1;
+  while (at < lines.length && !/^##\s/.test(lines[at])) at++;
+  while (at > h + 1 && !lines[at - 1].trim()) at--;
+  lines.splice(at, 0, projLine(p));
+  return lines.join('\n') + (lines[lines.length - 1] === '' ? '' : '\n');
+}
+function openProjEditor(name) {
+  editingProj = name;
+  const m = (name && projMeta(name)) || { name: name || '', kind: 'project', desc: '', start: null, deadline: null };
+  const n = name ? allTasks().filter(x => x.t.proj === name).length : 0;
+  $('pdlgTitle').textContent = name ? 'Edit project' : 'New project';
+  $('pName').value = m.name; $('pDesc').value = m.desc || ''; $('pKind').value = m.kind;
+  $('pStart').value = m.start || ''; $('pDeadline').value = m.deadline || '';
+  $('pTags').value = (m.tags || []).join(' '); renderTagPick();
+  $('pDelBtn').style.display = name ? '' : 'none';
+  $('pDelTasks').checked = false;
+  $('pDelTasksWrap').style.display = name && n ? '' : 'none';
+  $('pDelTasksTxt').textContent = `When deleting, also delete its ${n} task${n === 1 ? '' : 's'} (otherwise they stay, without a project)`;
+  $('pdlg').showModal(); $('pName').focus();
+}
+$('pCancelBtn').onclick = () => $('pdlg').close();
+const allProjTags = () => allTagPaths();
+const typedTags = () => [...new Set($('pTags').value.split(/[\s,]+/).map(cleanTag).filter(Boolean).map(resolveTag))];
+function renderTagPick() {
+  const cur = typedTags();
+  $('pTagPick').innerHTML = allProjTags().map(t => `<button type="button" class="ptchip ${cur.includes(t) ? 'on' : ''}" data-pick="${esc(t)}">${esc(t)}</button>`).join('');
+}
+$('pTags').addEventListener('input', renderTagPick);
+$('pTagPick').addEventListener('click', e => {
+  const b = e.target.closest('[data-pick]'); if (!b) return;
+  const t = b.dataset.pick, cur = typedTags();
+  $('pTags').value = (cur.includes(t) ? cur.filter(x => x !== t) : [...cur, t]).join(' ');
+  renderTagPick();
+});
+$('pdlg').addEventListener('close', () => render());
+$('pform').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('pName').value.trim().replace(/\*\*|\[\[|\]\]/g, ''); if (!name) return;
+  if (name !== editingProj && projects().includes(name)) { toast('A project with that name already exists'); return; }
+  const p = { name, desc: $('pDesc').value.trim(), kind: $('pKind').value, start: $('pStart').value || null, deadline: $('pDeadline').value || null, tags: typedTags() };
+  let tasksChanged = false;
+  if (editingProj && editingProj !== name) allTasks().forEach(({ t }) => { if (t.proj === editingProj) { t.proj = name; t.raw = null; tasksChanged = true; } });
+  const known = new Set(allTagPaths()), fresh = [];
+  for (const t of p.tags) { const parts = t.split('/'); parts.forEach((_, i) => { const q = parts.slice(0, i + 1).join('/'); if (!known.has(q)) { known.add(q); fresh.push({ path: q, created: nowStamp() }); } }); }
+  ST.text.PROJECTS = editProjectsText(editingProj, p);
+  if (fresh.length) ST.text.PROJECTS = withTagList(ST.text.PROJECTS, [...tagList, ...fresh]);
+  if (tasksChanged) ST.text.TASKS = serialize();
+  $('pdlg').close();
+  setText('PROJECTS', ST.text.PROJECTS);
+  toast(editingProj ? 'Project saved' : 'Project added');
+});
+$('pDelBtn').onclick = () => {
+  const b = $('pDelBtn');
+  if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Click again to delete'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Delete project'; }, 3000); return; }
+  delete b.dataset.armed; b.textContent = 'Delete project';
+  const name = editingProj, alsoTasks = $('pDelTasks').checked;
+  let changed = false;
+  for (const s of doc.sections) {
+    for (let i = s.items.length - 1; i >= 0; i--) {
+      const t = s.items[i]; if (t.rawLine !== undefined || t.proj !== name) continue;
+      if (alsoTasks) s.items.splice(i, 1); else { t.proj = ''; t.raw = null; }
+      changed = true;
+    }
+  }
+  if (changed) ST.text.TASKS = serialize();
+  ST.text.PROJECTS = editProjectsText(name, null);
+  filters.delete('P:' + name);
+  $('pdlg').close();
+  setText('PROJECTS', ST.text.PROJECTS);
+  toast('Project deleted');
+};
+
+/* ---------- add / rename / move / delete tags ---------- */
+let editingTag = null;
+function openTagEditor(path) {
+  editingTag = path;
+  const i = path ? path.lastIndexOf('/') : -1;
+  const parent = path ? (i > 0 ? path.slice(0, i) : '') : (projTag && projTag !== '__none' ? projTag : '');
+  const opts = allTagPaths().filter(t => !path || !underTag(t, path));
+  $('tParent').innerHTML = `<option value="">— top level —</option>` + opts.map(t => `<option value="${esc(t)}" ${t === parent ? 'selected' : ''}>${esc(t.split('/').join(' › '))}</option>`).join('');
+  $('tName').value = path ? path.slice(i + 1) : '';
+  const n = path ? projList.filter(p => (p.tags || []).some(t => underTag(t, path))).length : 0;
+  const nt = path ? allTasks().filter(x => x.t.tags.some(t => underTag(t, path))).length : 0;
+  $('tdlgTitle').textContent = path ? 'Edit tag' : 'New tag';
+  $('tInfo').textContent = path ? `Used by ${n} project${n === 1 ? '' : 's'} and ${nt} task${nt === 1 ? '' : 's'}. Changes apply to all of them${allTagPaths().some(t => t.startsWith(path + '/')) ? ' and to its sub-tags' : ''}.` : 'Tip: pick a parent to make it a sub-tag.';
+  $('tDelBtn').style.display = path ? '' : 'none';
+  $('tdlg').showModal(); $('tName').focus();
+}
+$('tCancelBtn').onclick = () => $('tdlg').close();
+$('tdlg').addEventListener('close', () => render());
+$('tform').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('tName').value.trim().replace(/[\/#]/g, '-').replace(/\s+/g, '-'); if (!name) return;
+  const parent = $('tParent').value, path = parent ? parent + '/' + name : name;
+  if (path !== editingTag && allTagPaths().includes(path)) { toast('That tag already exists'); return; }
+  $('tdlg').close();
+  if (!editingTag) { setText('PROJECTS', withTagList(ST.text.PROJECTS, [...tagList, { path, created: nowStamp() }])); toast('Tag added'); return; }
+  if (path === editingTag) return;
+  const n = retag(editingTag, path);
+  toast(n ? `Tag changed in ${n} place${n === 1 ? '' : 's'}` : 'Tag changed');
+});
+$('tDelBtn').onclick = () => {
+  const b = $('tDelBtn');
+  if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Click again to delete'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Delete tag'; }, 3000); return; }
+  delete b.dataset.armed; b.textContent = 'Delete tag';
+  const path = editingTag; $('tdlg').close();
+  const n = retag(path, null);
+  toast(n ? `Tag removed from ${n} place${n === 1 ? '' : 's'} (projects and tasks kept)` : 'Tag deleted');
+};
+
+/* ---------- sort + drag tags (up/down = order, right/left = nest/un-nest) ---------- */
+let lastTagDrag = 0, tdrag = null;
+mainEl.addEventListener('change', e => {
+  const sel = e.target.closest('[data-tsort]'); if (!sel) return;
+  tagSort = sel.value; try { localStorage.setItem('igor-tagsort', tagSort); } catch (er) {}
+  render();
+});
+mainEl.addEventListener('pointerdown', e => {
+  const h = e.target.closest('[data-drag]'); if (!h || e.button > 0) return;
+  e.preventDefault(); e.stopPropagation();
+  const side = h.closest('.ptags'), sr = side.getBoundingClientRect();
+  const rows = [...side.querySelectorAll('[data-row]')].map(el => ({ el, path: el.dataset.row, depth: Number(el.dataset.depth), r: el.getBoundingClientRect() }));
+  const src = rows.find(r => r.path === h.dataset.drag); if (!src) return;
+  const rest = rows.filter(r => !underTag(r.path, src.path));
+  rows.forEach(r => { if (underTag(r.path, src.path)) r.el.classList.add('dragging'); });
+  const line = document.createElement('div'); line.className = 'tdropline'; line.style.display = 'none'; side.appendChild(line);
+  tdrag = { src, rest, rows, line, side, sr, x0: e.clientX, y0: e.clientY, sy: window.scrollY, moved: false, target: null };
+  window.__tagDragging = true;
+  try { h.setPointerCapture(e.pointerId); } catch (er) {}
+});
+mainEl.addEventListener('pointermove', e => {
+  if (!tdrag) return;
+  const d = tdrag, dy = window.scrollY - d.sy;
+  if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 4) return;
+  d.moved = true; e.preventDefault();
+  const y = e.clientY + dy;                     // in the coordinates the rows were measured in
+  let i = 0; while (i < d.rest.length && d.rest[i].r.top + d.rest[i].r.height / 2 < y) i++;
+  const prev = d.rest[i - 1], next = d.rest[i];
+  const max = prev ? prev.depth + 1 : 0, min = next ? Math.min(next.depth, max) : 0;
+  const depth = Math.max(min, Math.min(max, d.src.depth + Math.round((e.clientX - d.x0) / 16)));
+  d.target = { prev: prev ? prev.path : null, prevDepth: prev ? prev.depth : -1, depth };
+  const lineY = prev ? prev.r.bottom : next ? next.r.top : d.src.r.top;
+  Object.assign(d.line.style, { display: '', top: (lineY - d.sr.top - 1) + 'px', left: (14 + depth * 16) + 'px' });
+});
+function endTagDrag(cancel) {
+  const d = tdrag; if (!d) return;
+  tdrag = null; window.__tagDragging = false; lastTagDrag = Date.now();
+  d.line.remove(); d.rows.forEach(r => r.el.classList.remove('dragging'));
+  if (!cancel && d.moved && d.target) moveTagTo(d.src.path, d.target);
+}
+mainEl.addEventListener('pointerup', () => endTagDrag(false));
+mainEl.addEventListener('pointercancel', () => endTagDrag(true));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && tdrag) endTagDrag(true); });
+
+function moveTagTo(path, { prev, prevDepth, depth }) {
+  const name = path.split('/').pop();
+  const parent = prev && depth > 0 ? prev.split('/').slice(0, depth).join('/') : '';
+  const newPath = parent ? parent + '/' + name : name;
+  const full = flatTags().map(x => x.path);
+  if (newPath !== path && full.includes(newPath)) { toast(`There is already a tag “${name}” there`); render(); return; }
+  const moving = full.filter(p => underTag(p, path)), rest = full.filter(p => !underTag(p, path));
+  let at = 0;
+  if (prev) {
+    if (depth > prevDepth) at = rest.indexOf(prev) + 1;
+    else { const anc = prev.split('/').slice(0, depth + 1).join('/'); at = rest.reduce((k, p, j) => underTag(p, anc) ? j + 1 : k, 0); }
+  }
+  const created = Object.fromEntries(tagList.map(x => [x.path, x.created]));
+  const moved = moving.map(p => ({ path: newPath + p.slice(path.length), created: created[p] || '' }));
+  const list = [...rest.slice(0, at).map(p => ({ path: p, created: created[p] || '' })), ...moved, ...rest.slice(at).map(p => ({ path: p, created: created[p] || '' }))];
+  const sameOrder = list.map(x => x.path).join('\n') === full.join('\n');
+  if (sameOrder && tagSort === 'custom' && tagList.length === full.length) return;
+  if (tagSort !== 'custom') { tagSort = 'custom'; try { localStorage.setItem('igor-tagsort', tagSort); } catch (er) {} toast('Sorted by your own order now'); }
+  if (newPath !== path) { const n = retag(path, newPath, list); toast(`Moved to ${parent ? parent.split('/').join(' › ') : 'top level'}${n ? ` · ${n} updated` : ''}`); }
+  else setText('PROJECTS', withTagList(ST.text.PROJECTS, list));
+}
+
+$('navBtn').onclick = () => document.body.classList.toggle('navopen');
+$('navShade').onclick = () => document.body.classList.remove('navopen');
+document.addEventListener('click', e => { if (document.body.classList.contains('navopen') && e.target.closest('#nav [data-ptag]') && !e.target.closest('[data-drag]')) setTimeout(() => document.body.classList.remove('navopen'), 150); });
+
 (async function init() {
-  try { const v = localStorage.getItem('igor-view'); if (['today', 'board', 'week', 'projects', 'gantt', 'goals'].includes(v)) view = v; } catch (e) {}
+  try { const v = localStorage.getItem('igor-view'); if ([...LIST_VIEWS, 'board', 'week', 'projects', 'gantt', 'goals'].includes(v)) view = v; } catch (e) {}
   applyAll(); render(); showSync(); renderLinkBar();
   sync();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { render(); sync(); } });
